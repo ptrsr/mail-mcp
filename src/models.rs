@@ -15,6 +15,7 @@ pub struct Meta {
     /// Current UTC timestamp in RFC 3339 format with milliseconds
     pub now_utc: String,
     /// Tool execution duration in milliseconds
+    #[schemars(schema_with = "nonnegative_integer_schema")]
     pub duration_ms: u64,
 }
 
@@ -26,6 +27,13 @@ impl Meta {
             duration_ms,
         }
     }
+}
+
+fn nonnegative_integer_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": "integer",
+        "minimum": 0
+    })
 }
 
 /// Standard response envelope for all tools

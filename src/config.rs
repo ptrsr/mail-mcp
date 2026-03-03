@@ -156,9 +156,13 @@ fn load_account(segment: &str) -> AppResult<AccountConfig> {
 fn required_env(key: &str) -> AppResult<String> {
     match env::var(key) {
         Ok(v) if !v.trim().is_empty() => Ok(v),
-        _ => Err(AppError::InvalidInput(format!(
-            "missing required environment variable {key}"
-        ))),
+        _ => {
+            let var_name = key.strip_prefix("MAIL_IMAP_").unwrap_or(key);
+            let suffix = var_name.split('_').next_back().unwrap_or(var_name);
+            Err(AppError::InvalidInput(format!(
+                "No IMAP accounts configured. Set MAIL_IMAP_<ID>_HOST/USER/PASS.\nmail-imap-mcp-rs startup error: missing {suffix}."
+            )))
+        }
     }
 }
 

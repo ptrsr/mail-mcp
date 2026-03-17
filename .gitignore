@@ -26,3 +26,6 @@
 
 # Cache
 .cache/
+
+# Playwright CLI
+.playwright-cli/

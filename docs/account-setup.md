@@ -187,6 +187,112 @@ Generate App Password at: **https://www.fastmail.com/settings/security/devicekey
 
 ---
 
+## Microsoft Graph API (Sending from any Microsoft account)
+
+Microsoft has disabled SMTP AUTH for personal accounts and many enterprise accounts.
+The `graph_send_message` tool uses **Microsoft Graph API** (`POST /me/sendMail`) instead
+of SMTP, which works for both personal and enterprise accounts.
+
+### Quick setup (using public Client ID)
+
+This uses a public Client ID from the email-oauth2-proxy project. No Azure registration needed.
+
+**Step 1 — Get a refresh token via device code flow:**
+
+Run this command (requires `python3` and `requests`):
+
+```bash
+python3 -c "
+import requests, time
+client_id = '9e5f94bc-e8a4-4e73-b8be-63364c29d753'
+scope = 'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access'
+data = requests.post('https://login.microsoftonline.com/common/oauth2/v2.0/devicecode',
+    data={'client_id': client_id, 'scope': scope}).json()
+print(f\"Open: {data['verification_uri']}\nCode: {data['user_code']}\")
+dc = data['device_code']
+while True:
+    time.sleep(5)
+    td = requests.post('https://login.microsoftonline.com/common/oauth2/v2.0/token',
+        data={'grant_type':'urn:ietf:params:oauth:grant-type:device_code','client_id':client_id,'device_code':dc}).json()
+    if 'access_token' in td: print(f\"REFRESH_TOKEN={td['refresh_token']}\"); break
+    elif td.get('error') != 'authorization_pending': print(f\"Error: {td}\"); break
+"
+```
+
+**Step 2 — Open the URL shown, enter the code, and sign in with your Microsoft account.**
+
+**Step 3 — Copy the REFRESH_TOKEN and configure:**
+
+```env
+MAIL_IMAP_OUTLOOK_HOST=outlook.office365.com
+MAIL_IMAP_OUTLOOK_PORT=993
+MAIL_IMAP_OUTLOOK_USER=you@hotmail.com
+MAIL_IMAP_OUTLOOK_PASS=your-app-password
+MAIL_IMAP_OUTLOOK_SECURE=true
+
+MAIL_OAUTH2_OUTLOOK_PROVIDER=microsoft
+MAIL_OAUTH2_OUTLOOK_CLIENT_ID=9e5f94bc-e8a4-4e73-b8be-63364c29d753
+MAIL_OAUTH2_OUTLOOK_CLIENT_SECRET=none
+MAIL_OAUTH2_OUTLOOK_REFRESH_TOKEN=<paste-your-refresh-token>
+```
+
+> **Note:** For IMAP on personal accounts, you still need an App Password
+> (https://account.live.com/proofs/AppPassword). The OAuth2 config is used
+> by `graph_send_message` for sending emails.
+
+> **Note for enterprise accounts:** If your organization blocks the public Client ID,
+> you need to create your own (see below).
+
+### Creating your own Azure Client ID (advanced)
+
+If the public Client ID stops working or your organization blocks it, register your own app:
+
+**Step 1 — Go to Azure Entra (formerly Azure AD):**
+1. Open: **https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade**
+2. Sign in with an admin account (or your personal Microsoft account)
+
+**Step 2 — Register a new application:**
+1. Click **"New registration"**
+2. Name: `mail-imap-mcp` (or any name you prefer)
+3. Supported account types: choose based on your needs:
+   - **"Personal Microsoft accounts only"** — for hotmail/outlook.com
+   - **"Accounts in any organizational directory and personal Microsoft accounts"** — for both enterprise and personal
+4. Redirect URI: select **"Public client/native"** and enter: `http://localhost:11080`
+5. Click **"Register"**
+
+**Step 3 — Note the Client ID:**
+- After registration, copy the **"Application (client) ID"** from the overview page
+- This is your `MAIL_OAUTH2_<SEG>_CLIENT_ID`
+
+**Step 4 — Configure API permissions:**
+1. Go to **"API permissions"** in the left menu
+2. Click **"Add a permission"** → **"Microsoft Graph"** → **"Delegated permissions"**
+3. Add these permissions:
+   - `Mail.Send` — send emails via Graph API
+   - `Mail.ReadWrite` — read/write mailbox (optional, for future features)
+   - `IMAP.AccessAsUser.All` — IMAP access (only needed if using OAuth2 for IMAP too)
+4. Click **"Add permissions"**
+5. If you see "Admin consent required": ask your admin to click **"Grant admin consent"**
+
+**Step 5 — Enable public client flow:**
+1. Go to **"Authentication"** in the left menu
+2. Scroll to **"Advanced settings"**
+3. Set **"Allow public client flows"** to **Yes**
+4. Click **"Save"**
+
+**Step 6 — Get refresh token:**
+- Use the device code flow script above, replacing the `client_id` with your new one
+- Set `MAIL_OAUTH2_<SEG>_CLIENT_SECRET=none` (public client, no secret needed)
+
+**Direct links:**
+| Action | URL |
+|--------|-----|
+| Register new app | https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false |
+| View your apps | https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade |
+| Personal account apps | https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade |
+
+---
+
 ## Multi-Account Configuration
 
 You can configure multiple accounts using different segment names:
@@ -226,7 +332,7 @@ Use `account_id` parameter in tool calls: `"account_id": "gmail"`, `"account_id"
 ## Troubleshooting
 
 ### "basic authentication is disabled" (Microsoft)
-Microsoft personal accounts block SMTP AUTH. Use a different provider for sending, or wait for Graph API support.
+Microsoft blocks SMTP AUTH for personal accounts and many enterprise accounts. Use `graph_send_message` tool instead — it uses Microsoft Graph API which works for all Microsoft account types.
 
 ### "Authentication unsuccessful" (Microsoft)
 - Verify your App Password is correct (not your regular password)

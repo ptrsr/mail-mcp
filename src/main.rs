@@ -74,9 +74,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("starting MCP server transport=Stdio");
     let config = ServerConfig::load_from_env()?;
-    let service = server::MailImapServer::new(config).serve(stdio()).await?;
+    let update_notice = check_for_updates().await;
+    let service = server::MailImapServer::new(config, update_notice).serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
+}
+
+/// Check GitHub for newer releases. Returns a notice string if an update is available.
+/// Times out after 2 seconds to avoid blocking startup.
+async fn check_for_updates() -> Option<String> {
+    let current = env!("CARGO_PKG_VERSION");
+    let url = "https://api.github.com/repos/tecnologicachile/mail-imap-mcp-rs/releases/latest";
+
+    let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(url)
+            .header("User-Agent", "mail-imap-mcp-rs")
+            .header("Accept", "application/vnd.github.v3+json")
+            .send()
+            .await
+            .ok()?;
+        if !resp.status().is_success() {
+            return None;
+        }
+        let body: serde_json::Value = resp.json().await.ok()?;
+        let latest_tag = body["tag_name"].as_str()?;
+        let latest = latest_tag.trim_start_matches('v');
+        if latest != current && latest > current {
+            Some(format!(
+                "\n\nUpdate available: v{current} -> {latest_tag}. \
+                 See https://github.com/tecnologicachile/mail-imap-mcp-rs/releases/tag/{latest_tag}"
+            ))
+        } else {
+            None
+        }
+    })
+    .await;
+
+    match result {
+        Ok(notice) => {
+            if let Some(ref msg) = notice {
+                tracing::info!("update check: {msg}");
+            } else {
+                tracing::debug!("update check: running latest version v{current}");
+            }
+            notice
+        }
+        Err(_) => {
+            tracing::debug!("update check: timed out (2s)");
+            None
+        }
+    }
 }
 
 fn should_print_help<I>(args: I) -> bool

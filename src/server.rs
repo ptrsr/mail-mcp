@@ -56,6 +56,8 @@ pub struct MailImapServer {
     token_manager: Option<Arc<crate::oauth2::TokenManager>>,
     /// OAuth2 token manager for Graph API (separate scopes from IMAP)
     graph_token_manager: Option<Arc<crate::oauth2::TokenManager>>,
+    /// Update notice if a newer version is available
+    update_notice: Option<String>,
     /// Tool router for dispatching MCP tool calls
     tool_router: ToolRouter<Self>,
 }
@@ -65,7 +67,7 @@ impl MailImapServer {
     /// Create a new MCP server instance
     ///
     /// Initializes cursor store with configured TTL and max entries.
-    pub fn new(config: ServerConfig) -> Self {
+    pub fn new(config: ServerConfig, update_notice: Option<String>) -> Self {
         let cursor_store = CursorStore::new(config.cursor_ttl_seconds, config.cursor_max_entries);
         let token_manager = if config.oauth2_accounts.is_empty() {
             None
@@ -86,6 +88,7 @@ impl MailImapServer {
             cursors: Arc::new(Mutex::new(cursor_store)),
             token_manager,
             graph_token_manager,
+            update_notice,
             tool_router: Self::tool_router(),
         }
     }
@@ -679,7 +682,7 @@ impl ServerHandler for MailImapServer {
                 "https://github.com/tecnologicachile/mail-imap-mcp-rs — contributions, ",
                 "feature requests and bug reports are welcome via GitHub Issues. ",
                 "For questions or suggestions, email contacto@tecnologicachile.cl.",
-            ).to_owned()),
+            ).to_owned() + self.update_notice.as_deref().unwrap_or("")),
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             ..Default::default()
         }

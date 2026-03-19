@@ -255,12 +255,26 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 - [x] PDF text extraction from attachments
 - [x] HTML sanitization (ammonia)
 - [x] Provider setup documentation with direct links
+- [x] Attachment sending (SMTP/Graph)
+- [x] Reply with original attachments
+- [x] CDATA sanitization (Zoho bug fix)
+- [x] Email confirmation protocol (preview before send)
+- [x] Token-optimized instructions (75% reduction)
+- [x] On-demand setup guide tool
+
+### v0.3.0 — Local cache with instant search (next)
+- [ ] **SQLite + FTS5 local email cache** — instant searches (<10ms vs 3-10s)
+- [ ] **Incremental sync** — UIDVALIDITY + last UID delta sync
+- [ ] **Connection pooling** — persistent IMAP sessions per account
+- [ ] **Cross-account search** — search all accounts at once
+- [ ] **Email statistics** — counts, top senders, activity by date
+
+### Future
 - [ ] Docker image
 - [ ] npm/npx distribution
-- [ ] Google Calendar integration
-- [ ] Attachment sending (SMTP/Graph)
 - [ ] Draft management
 - [ ] Contact search
+- [ ] IMAP IDLE (real-time notifications)
 - [ ] Hosted documentation site
 
 ## Documentation

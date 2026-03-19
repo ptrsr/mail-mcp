@@ -222,8 +222,12 @@ fn build_message(comp: &EmailComposition) -> AppResult<Message> {
         builder = builder.references(references.clone());
     }
 
+    // Sanitize CDATA artifacts from body text (Zoho bug: ]]> leaks into plain text)
+    let body_text = comp.body_text.as_ref().map(|t| sanitize_cdata(t));
+    let body_html = comp.body_html.as_ref().map(|h| sanitize_cdata(h));
+
     // Build body part
-    let body_part = match (&comp.body_text, &comp.body_html) {
+    let body_part = match (&body_text, &body_html) {
         (Some(text), Some(html)) => MultiPart::alternative()
             .singlepart(
                 SinglePart::builder()
@@ -326,6 +330,12 @@ async fn build_transport(
     }
 
     Ok(builder.build())
+}
+
+/// Remove CDATA artifacts (]]>) that some email clients (notably Zoho)
+/// leak into plain text when converting from HTML templates.
+fn sanitize_cdata(text: &str) -> String {
+    text.replace("]]>", "").replace("<![CDATA[", "")
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────

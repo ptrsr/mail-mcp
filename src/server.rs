@@ -638,7 +638,16 @@ impl ServerHandler for MailImapServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(concat!(
-                "Secure IMAP MCP server. Read operations are enabled by default; ",
+                "Secure IMAP/SMTP/Graph API MCP server for email.\n\n",
+                "IMPORTANT — Email sending confirmation protocol:\n",
+                "Before sending ANY email (smtp_send_message, smtp_reply_message, ",
+                "smtp_forward_message, graph_send_message), you MUST:\n",
+                "1. Show the user a preview with: To, CC, BCC, Subject, Body (first lines), ",
+                "and Attachments (filenames + sizes).\n",
+                "2. Ask for explicit confirmation ('send it?' or similar).\n",
+                "3. Only call the send tool after the user confirms.\n",
+                "Never send an email without user approval. This applies to all accounts.\n\n",
+                "Read operations are enabled by default; ",
                 "write tools require MAIL_IMAP_WRITE_ENABLED=true. ",
                 "SMTP send tools require MAIL_SMTP_WRITE_ENABLED=true.\n\n",
                 "Provider notes:\n",

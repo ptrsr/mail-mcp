@@ -143,8 +143,8 @@ pub async fn send_email(
     let access_token = token_manager.get_access_token(account_id).await?;
 
     let (content_type, content) = match (&params.body_html, &params.body_text) {
-        (Some(html), _) => ("HTML", html.clone()),
-        (None, Some(text)) => ("Text", text.clone()),
+        (Some(html), _) => ("HTML", sanitize_cdata(html)),
+        (None, Some(text)) => ("Text", sanitize_cdata(text)),
         (None, None) => ("Text", String::new()),
     };
 
@@ -222,6 +222,11 @@ pub async fn send_email(
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
+
+/// Remove CDATA artifacts that some email clients leak into text.
+fn sanitize_cdata(text: &str) -> String {
+    text.replace("]]>", "").replace("<![CDATA[", "")
+}
 
 #[cfg(test)]
 mod tests {

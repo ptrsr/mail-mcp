@@ -43,7 +43,31 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 
 > **EWS is the simplest way to add Microsoft accounts** — single OAuth2 token for both reading and sending. Works even on tenants that block Graph API and IMAP.
 
-## Quickstart (2 minutes)
+## Quickstart — Let Claude Code do it
+
+Copy and paste this prompt into Claude Code and it will install, compile, and configure everything for you:
+
+```
+Install and configure the mail-imap-mcp-rs MCP server from https://github.com/tecnologicachile/mail-imap-mcp-rs
+
+1. Clone the repo, build with cargo build --release
+2. Add the MCP server to .claude.json with the binary path
+3. For Microsoft accounts: use EWS (simplest) — run device code flow with
+   client_id d3590ed6-52b3-4102-aeff-aad2292ab01c and scope
+   https://outlook.office365.com/EWS.AccessAsUser.All offline_access
+   Then configure MAIL_EWS_<ID>_USER and MAIL_EWS_<ID>_REFRESH_TOKEN
+4. For Gmail: configure MAIL_IMAP + MAIL_SMTP with App Password from
+   https://myaccount.google.com/apppasswords
+5. For Zoho: configure MAIL_IMAP + MAIL_SMTP with standard password
+6. Enable write/send: MAIL_IMAP_WRITE_ENABLED=true, MAIL_SMTP_WRITE_ENABLED=true
+
+My email accounts to configure:
+- <your-email@example.com>
+```
+
+Replace the last line with your email(s). Claude Code will guide you through each step including the OAuth2 device code flow for Microsoft accounts.
+
+## Manual Setup (2 minutes)
 
 ```bash
 git clone https://github.com/tecnologicachile/mail-imap-mcp-rs.git

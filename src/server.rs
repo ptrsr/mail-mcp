@@ -3052,15 +3052,20 @@ impl MailImapServer {
             in_reply_to: input.in_reply_to,
             references: input.references,
             save_to_sent: input.save_to_sent,
-            attachments: input
-                .attachments
-                .into_iter()
-                .map(|a| graph::GraphEmailAttachment {
-                    filename: a.filename,
-                    content_type: a.content_type,
-                    content_base64: a.content_base64,
-                })
-                .collect(),
+            attachments: {
+                let mut atts = Vec::new();
+                for a in &input.attachments {
+                    let (b64, fname) = resolve_attachment_base64(a)?;
+                    let filename = a.filename.clone().unwrap_or(fname);
+                    let content_type = a.content_type.clone().unwrap_or_else(|| guess_content_type(&filename));
+                    atts.push(graph::GraphEmailAttachment {
+                        filename,
+                        content_type,
+                        content_base64: b64,
+                    });
+                }
+                atts
+            },
         };
 
         graph::send_email(tm, &input.account_id, &params).await?;
@@ -3815,21 +3820,97 @@ fn decode_attachments(inputs: &[AttachmentInput]) -> AppResult<Vec<smtp::EmailAt
     inputs
         .iter()
         .map(|a| {
-            let content = base64::engine::general_purpose::STANDARD
-                .decode(&a.content_base64)
-                .map_err(|e| {
+            // Read content from file_path or decode base64
+            let (content, resolved_filename) = if let Some(ref path) = a.file_path {
+                let content = std::fs::read(path).map_err(|e| {
                     AppError::InvalidInput(format!(
-                        "invalid base64 in attachment '{}': {e}",
-                        a.filename
+                        "cannot read attachment file '{}': {e}",
+                        path
                     ))
                 })?;
+                let fname = std::path::Path::new(path)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "attachment".to_owned());
+                (content, fname)
+            } else if let Some(ref b64) = a.content_base64 {
+                let content = base64::engine::general_purpose::STANDARD
+                    .decode(b64)
+                    .map_err(|e| {
+                        AppError::InvalidInput(format!(
+                            "invalid base64 in attachment '{}': {e}",
+                            a.filename.as_deref().unwrap_or("unknown")
+                        ))
+                    })?;
+                (content, a.filename.clone().unwrap_or_else(|| "attachment".to_owned()))
+            } else {
+                return Err(AppError::InvalidInput(
+                    "attachment must have either 'file_path' or 'content_base64'".to_owned(),
+                ));
+            };
+
+            let filename = a.filename.clone().unwrap_or(resolved_filename);
+
+            // Auto-detect content type from extension if not provided
+            let content_type = a.content_type.clone().unwrap_or_else(|| {
+                guess_content_type(&filename)
+            });
+
             Ok(smtp::EmailAttachment {
-                filename: a.filename.clone(),
-                content_type: a.content_type.clone(),
+                filename,
+                content_type,
                 content,
             })
         })
         .collect()
+}
+
+/// Resolve attachment to base64 string (for Graph API). Returns (base64, filename).
+fn resolve_attachment_base64(a: &AttachmentInput) -> AppResult<(String, String)> {
+    use base64::Engine;
+    if let Some(ref path) = a.file_path {
+        let content = std::fs::read(path).map_err(|e| {
+            AppError::InvalidInput(format!("cannot read attachment file '{}': {e}", path))
+        })?;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&content);
+        let fname = std::path::Path::new(path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "attachment".to_owned());
+        Ok((b64, fname))
+    } else if let Some(ref b64) = a.content_base64 {
+        Ok((b64.clone(), a.filename.clone().unwrap_or_else(|| "attachment".to_owned())))
+    } else {
+        Err(AppError::InvalidInput(
+            "attachment must have either 'file_path' or 'content_base64'".to_owned(),
+        ))
+    }
+}
+
+/// Guess MIME type from file extension
+fn guess_content_type(filename: &str) -> String {
+    let ext = filename.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    match ext.as_str() {
+        "pdf" => "application/pdf",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "doc" => "application/msword",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xls" => "application/vnd.ms-excel",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "ppt" => "application/vnd.ms-powerpoint",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "zip" => "application/zip",
+        "csv" => "text/csv",
+        "txt" => "text/plain",
+        "html" | "htm" => "text/html",
+        "xml" => "application/xml",
+        "json" => "application/json",
+        _ => "application/octet-stream",
+    }
+    .to_owned()
 }
 
 fn require_smtp_write_enabled(config: &ServerConfig) -> AppResult<()> {

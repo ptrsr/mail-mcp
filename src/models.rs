@@ -532,15 +532,21 @@ pub struct AppendMessageInput {
 
 // ─── Attachment model ────────────────────────────────────────────────────────
 
-/// Email attachment (base64-encoded content)
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+/// Email attachment — provide either file_path (preferred for large files) or content_base64
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
 pub struct AttachmentInput {
-    /// Filename (e.g., "report.pdf")
-    pub filename: String,
-    /// MIME type (e.g., "application/pdf", "image/png")
-    pub content_type: String,
-    /// Base64-encoded file content
-    pub content_base64: String,
+    /// Filename (e.g., "report.pdf"). Auto-detected from file_path if omitted.
+    #[serde(default)]
+    pub filename: Option<String>,
+    /// MIME type (e.g., "application/pdf", "image/png"). Auto-detected from extension if omitted.
+    #[serde(default)]
+    pub content_type: Option<String>,
+    /// Base64-encoded file content (use for small files)
+    #[serde(default)]
+    pub content_base64: Option<String>,
+    /// Local file path (use for large files — MCP reads the file directly)
+    #[serde(default)]
+    pub file_path: Option<String>,
 }
 
 // ─── SMTP input models ───────────────────────────────────────────────────────

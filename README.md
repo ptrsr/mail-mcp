@@ -14,7 +14,7 @@
 
 ---
 
-Most email MCP servers only do IMAP reads. This one does **everything**: read, search, send, reply, forward, bulk operations, and Microsoft Graph API — with real OAuth2, multi-account, and multi-provider support. Written in Rust for speed and safety.
+Most email MCP servers only do IMAP reads. This one does **everything**: read, search, send, reply, forward, bulk operations, Microsoft Graph API, and Exchange Web Services — with real OAuth2, multi-account, and multi-provider support. Written in Rust for speed and safety.
 
 ## Why This Project
 
@@ -23,6 +23,7 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 | IMAP read/write | 18 tools | 3-5 tools |
 | SMTP send/reply/forward | Yes | No or broken |
 | Microsoft Graph API | Yes | No |
+| EWS (Exchange Web Services) | Yes | No |
 | OAuth2 (XOAUTH2) | Native | No |
 | Multi-account | Yes | Single account |
 | Microsoft 365 + Hotmail | Both work | Usually neither |
@@ -31,14 +32,16 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 
 ## Feature Matrix
 
-| Provider | IMAP | SMTP | Graph API | OAuth2 | Multi-account |
-|----------|:----:|:----:|:---------:|:------:|:-------------:|
-| Microsoft 365 (enterprise) | Yes | Admin-dependent | Yes | Yes | Yes |
-| Hotmail / Outlook.com | Yes | Blocked by MS | Yes | Yes | Yes |
-| Gmail | Yes | Yes | — | Yes | Yes |
-| Zoho | Yes | Yes | — | — | Yes |
-| Fastmail | Yes | Yes | — | — | Yes |
-| Any IMAP/SMTP server | Yes | Yes | — | — | Yes |
+| Provider | IMAP | SMTP | Graph API | EWS | OAuth2 | Multi-account |
+|----------|:----:|:----:|:---------:|:---:|:------:|:-------------:|
+| Microsoft 365 (enterprise) | Yes | Admin-dependent | Yes | **Yes** | Yes | Yes |
+| Hotmail / Outlook.com | Yes | Blocked by MS | Yes | **Yes** | Yes | Yes |
+| Gmail | Yes | Yes | — | — | Yes | Yes |
+| Zoho | Yes | Yes | — | — | — | Yes |
+| Fastmail | Yes | Yes | — | — | — | Yes |
+| Any IMAP/SMTP server | Yes | Yes | — | — | — | Yes |
+
+> **EWS is the simplest way to add Microsoft accounts** — single OAuth2 token for both reading and sending. Works even on tenants that block Graph API and IMAP.
 
 ## Quickstart (2 minutes)
 
@@ -94,7 +97,7 @@ Microsoft blocks SMTP on personal accounts. Use Graph API instead:
 
 Get your token in 1 minute with device code flow. See [Account Setup Guide](docs/account-setup.md).
 
-## 25 MCP Tools
+## 30 MCP Tools
 
 ### Read (7 tools)
 
@@ -134,6 +137,14 @@ Get your token in 1 minute with device code flow. See [Account Setup Guide](docs
 | `smtp_forward_message` | Forward with original inline |
 | `smtp_verify_account` | Test SMTP connectivity |
 | `graph_send_message` | Send via Microsoft Graph API |
+
+### EWS — Exchange Web Services (3 tools)
+
+| Tool | What it does |
+|------|-------------|
+| `ews_search_messages` | Search emails via EWS (inbox, sent, drafts, etc.) |
+| `ews_get_message` | Get full email content via EWS |
+| `ews_send_message` | Send email via EWS |
 
 ### Bulk Operations (2 tools)
 
@@ -227,6 +238,17 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 | `MAIL_GRAPH_<ID>_CLIENT_SECRET` | Yes | — | Client secret (`none` for public clients) |
 | `MAIL_GRAPH_<ID>_REFRESH_TOKEN` | Yes | — | Refresh token (Mail.Send scope) |
 
+### EWS — Exchange Web Services (per account, simplest for Microsoft)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MAIL_EWS_<ID>_USER` | Yes | — | Email address |
+| `MAIL_EWS_<ID>_REFRESH_TOKEN` | Yes | — | OAuth2 refresh token (EWS scope) |
+| `MAIL_EWS_<ID>_CLIENT_ID` | No | `d3590ed6...` (Microsoft Office) | OAuth2 client ID |
+| `MAIL_EWS_<ID>_CLIENT_SECRET` | No | `none` | Client secret |
+
+> **Tip:** EWS only needs 2 variables (USER + REFRESH_TOKEN). Client ID defaults to Microsoft Office which has all permissions pre-approved.
+
 ### Global Settings
 
 | Variable | Default | Description |
@@ -261,8 +283,10 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 - [x] Email confirmation protocol (preview before send)
 - [x] Token-optimized instructions (75% reduction)
 - [x] On-demand setup guide tool
+- [x] **EWS (Exchange Web Services)** — single token for read + send on Microsoft
+- [x] EWS with Microsoft Office Client ID (works on restricted tenants)
 
-### v0.3.0 — Local cache with instant search (next)
+### Next — Local cache with instant search
 - [ ] **SQLite + FTS5 local email cache** — instant searches (<10ms vs 3-10s)
 - [ ] **Incremental sync** — UIDVALIDITY + last UID delta sync
 - [ ] **Connection pooling** — persistent IMAP sessions per account

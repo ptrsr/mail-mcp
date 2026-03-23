@@ -121,13 +121,14 @@ Microsoft blocks SMTP on personal accounts. Use Graph API instead:
 
 Get your token in 1 minute with device code flow. See [Account Setup Guide](docs/account-setup.md).
 
-## 31 MCP Tools
+## 30 MCP Tools
 
-### Read (7 tools)
+### Read (8 tools)
 
 | Tool | What it does |
 |------|-------------|
-| `imap_list_accounts` | List configured accounts |
+| `list_all_accounts` | **List all accounts with capabilities** (IMAP, SMTP, Graph, EWS) |
+| `imap_list_accounts` | List IMAP accounts |
 | `imap_verify_account` | Test connectivity and auth |
 | `imap_list_mailboxes` | List folders |
 | `imap_mailbox_status` | Message counts |
@@ -151,11 +152,10 @@ Get your token in 1 minute with device code flow. See [Account Setup Guide](docs
 | `imap_bulk_delete` | Delete up to 500 at once |
 | `imap_bulk_update_flags` | Flag up to 500 at once |
 
-### Send (6 tools)
+### Send (5 tools)
 
 | Tool | What it does |
 |------|-------------|
-| `smtp_list_accounts` | List SMTP accounts |
 | `smtp_send_message` | Send email (text/HTML, CC/BCC) |
 | `smtp_reply_message` | Reply with threading headers |
 | `smtp_forward_message` | Forward with original inline |

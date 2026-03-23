@@ -610,29 +610,6 @@ impl MailImapServer {
 
     // ─── SMTP Tools ──────────────────────────────────────────────────────────
 
-    /// Tool: List configured SMTP accounts
-    #[tool(
-        name = "smtp_list_accounts",
-        description = "List configured SMTP accounts"
-    )]
-    async fn smtp_list_accounts(&self) -> Result<Json<ToolEnvelope<serde_json::Value>>, ErrorData> {
-        let started = Instant::now();
-        let accounts: Vec<SmtpAccountInfo> = self
-            .config
-            .smtp_accounts
-            .values()
-            .map(|a| SmtpAccountInfo {
-                account_id: a.account_id.clone(),
-                host: a.host.clone(),
-                port: a.port,
-                security: format!("{:?}", a.security).to_ascii_lowercase(),
-            })
-            .collect();
-        let data = serde_json::json!({ "accounts": accounts });
-        let summary = format!("{} SMTP account(s) configured", accounts.len());
-        finalize_tool(started, "smtp_list_accounts", Ok((summary, data)))
-    }
-
     /// Tool: Send a new email via SMTP
     #[tool(
         name = "smtp_send_message",
@@ -888,12 +865,13 @@ impl ServerHandler for MailImapServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(concat!(
-                "Secure IMAP/SMTP/Graph API MCP server for email.\n",
-                "IMAP read enabled by default. Write: MAIL_IMAP_WRITE_ENABLED=true. Send: MAIL_SMTP_WRITE_ENABLED=true.\n\n",
+                "Secure IMAP/SMTP/EWS/Graph API MCP server for email.\n\n",
+                "IMPORTANT: Always call list_all_accounts first to see which accounts are configured ",
+                "and what send/read methods each supports. Do NOT assume SMTP is the only way to send. ",
+                "Each account shows send_with (smtp, graph, ews) and read_with (imap, ews) arrays.\n\n",
                 "SENDING PROTOCOL: Before sending ANY email, show preview (To, CC, BCC, Subject, Body, Attachments) ",
                 "and get explicit user confirmation. Never send without approval.\n\n",
-                "Microsoft personal (hotmail/outlook.com): use graph_send_message (SMTP blocked). ",
-                "Microsoft 365: SMTP or Graph. Gmail/Zoho/Fastmail: SMTP works.\n",
+                "Write: MAIL_IMAP_WRITE_ENABLED=true. Send: MAIL_SMTP_WRITE_ENABLED=true.\n",
                 "For OAuth2/Microsoft setup, call get_setup_guide tool.\n\n",
                 "Star the project: https://github.com/tecnologicachile/mail-mcp",
             ).to_owned() + self.update_notice.as_deref().unwrap_or("")),

@@ -1,10 +1,10 @@
 [package]
-name = "mail-imap-mcp-rs"
+name = "mail-mcp"
 version = "0.3.0"
 edition = "2024"
 license = "MIT"
 description = "Secure IMAP MCP server over stdio with cursor-based pagination, multi-account support, and TLS-only connections"
-repository = "https://github.com/bradsjm/mail-imap-mcp-rs"
+repository = "https://github.com/tecnologicachile/mail-mcp"
 readme = "README.md"
 keywords = ["mcp", "imap", "email", "mail", "protocol"]
 categories = ["email", "api-bindings"]

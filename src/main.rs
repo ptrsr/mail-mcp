@@ -1,4 +1,4 @@
-//! mail-imap-mcp-rs: Secure IMAP MCP server over stdio
+//! mail-mcp: Secure IMAP MCP server over stdio
 //!
 //! This server provides read/write access to IMAP mailboxes via the Model
 //! Context Protocol (MCP) over stdio. It features cursor-based pagination,
@@ -85,13 +85,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Times out after 2 seconds to avoid blocking startup.
 async fn check_for_updates() -> Option<String> {
     let current = env!("CARGO_PKG_VERSION");
-    let url = "https://api.github.com/repos/tecnologicachile/mail-imap-mcp-rs/releases/latest";
+    let url = "https://api.github.com/repos/tecnologicachile/mail-mcp/releases/latest";
 
     let result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
         let client = reqwest::Client::new();
         let resp = client
             .get(url)
-            .header("User-Agent", "mail-imap-mcp-rs")
+            .header("User-Agent", "mail-mcp")
             .header("Accept", "application/vnd.github.v3+json")
             .send()
             .await
@@ -105,7 +105,7 @@ async fn check_for_updates() -> Option<String> {
         if latest != current && latest > current {
             Some(format!(
                 "\n\nUpdate available: v{current} -> {latest_tag}. \
-                 See https://github.com/tecnologicachile/mail-imap-mcp-rs/releases/tag/{latest_tag}"
+                 See https://github.com/tecnologicachile/mail-mcp/releases/tag/{latest_tag}"
             ))
         } else {
             None
@@ -152,12 +152,12 @@ fn build_help_output(env_map: &BTreeMap<String, String>) -> String {
     let account_sections = discover_account_sections(env_map);
     let mut out = String::new();
 
-    out.push_str("mail-imap-mcp-rs\n");
+    out.push_str("mail-mcp\n");
     out.push_str("Secure IMAP MCP server over stdio\n\n");
 
     out.push_str("Usage:\n");
-    out.push_str("  mail-imap-mcp-rs\n");
-    out.push_str("  mail-imap-mcp-rs --help\n\n");
+    out.push_str("  mail-mcp\n");
+    out.push_str("  mail-mcp --help\n\n");
 
     out.push_str("IMAP environment setup\n");
     out.push_str("  Required per account section MAIL_IMAP_<ACCOUNT>_:\n");

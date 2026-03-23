@@ -217,7 +217,7 @@ fn load_account(
         _ if has_oauth2 => None,
         _ => {
             return Err(AppError::InvalidInput(format!(
-                "No IMAP accounts configured. Set MAIL_IMAP_<ID>_HOST/USER/PASS (or configure OAuth2 via MAIL_OAUTH2_<ID>_*).\nmail-imap-mcp-rs startup error: missing PASS."
+                "No IMAP accounts configured. Set MAIL_IMAP_<ID>_HOST/USER/PASS (or configure OAuth2 via MAIL_OAUTH2_<ID>_*).\nmail-mcp startup error: missing PASS."
             )));
         }
     };
@@ -511,7 +511,7 @@ fn required_env(key: &str) -> AppResult<String> {
             let var_name = key.strip_prefix("MAIL_IMAP_").unwrap_or(key);
             let suffix = var_name.split('_').next_back().unwrap_or(var_name);
             Err(AppError::InvalidInput(format!(
-                "No IMAP accounts configured. Set MAIL_IMAP_<ID>_HOST/USER/PASS.\nmail-imap-mcp-rs startup error: missing {suffix}."
+                "No IMAP accounts configured. Set MAIL_IMAP_<ID>_HOST/USER/PASS.\nmail-mcp startup error: missing {suffix}."
             )))
         }
     }

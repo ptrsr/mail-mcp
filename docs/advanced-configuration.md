@@ -269,7 +269,7 @@ When running in Docker, ensure environment variables are passed correctly:
 docker run --rm -i \
   --env-file .env \
   -e MAIL_IMAP_CONNECT_TIMEOUT_MS=45000 \
-  mail-imap-mcp-rs
+  mail-mcp
 ```
 
 File-based env loading (`--env-file`) takes precedence over `-e` flags.

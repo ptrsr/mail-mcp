@@ -1,14 +1,14 @@
 <p align="center">
-  <h1 align="center">mail-imap-mcp-rs</h1>
+  <h1 align="center">mail-mcp</h1>
   <p align="center">
     <strong>Production-ready email MCP server for AI agents</strong><br>
     IMAP + SMTP + EWS + Microsoft Graph API — built in Rust
   </p>
   <p align="center">
-    <a href="https://github.com/tecnologicachile/mail-imap-mcp-rs/actions"><img src="https://img.shields.io/github/actions/workflow/status/tecnologicachile/mail-imap-mcp-rs/ci.yml?label=build" alt="Build"></a>
-    <a href="https://github.com/tecnologicachile/mail-imap-mcp-rs/releases"><img src="https://img.shields.io/github/v/release/tecnologicachile/mail-imap-mcp-rs?label=release" alt="Release"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/tecnologicachile/mail-imap-mcp-rs" alt="License"></a>
-    <a href="https://github.com/tecnologicachile/mail-imap-mcp-rs/stargazers"><img src="https://img.shields.io/github/stars/tecnologicachile/mail-imap-mcp-rs?style=social" alt="Stars"></a>
+    <a href="https://github.com/tecnologicachile/mail-mcp/actions"><img src="https://img.shields.io/github/actions/workflow/status/tecnologicachile/mail-mcp/ci.yml?label=build" alt="Build"></a>
+    <a href="https://github.com/tecnologicachile/mail-mcp/releases"><img src="https://img.shields.io/github/v/release/tecnologicachile/mail-mcp?label=release" alt="Release"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/tecnologicachile/mail-mcp" alt="License"></a>
+    <a href="https://github.com/tecnologicachile/mail-mcp/stargazers"><img src="https://img.shields.io/github/stars/tecnologicachile/mail-mcp?style=social" alt="Stars"></a>
   </p>
 </p>
 
@@ -18,7 +18,7 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 
 ## Why This Project
 
-| | mail-imap-mcp-rs | Typical email MCP |
+| | mail-mcp | Typical email MCP |
 |---|:---:|:---:|
 | IMAP read/write | 18 tools | 3-5 tools |
 | SMTP send/reply/forward | Yes | No or broken |
@@ -48,7 +48,7 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 Copy and paste this prompt into Claude Code and it will install, compile, and configure everything for you:
 
 ```
-Install and configure the mail-imap-mcp-rs MCP server from https://github.com/tecnologicachile/mail-imap-mcp-rs
+Install and configure the mail-mcp MCP server from https://github.com/tecnologicachile/mail-mcp
 
 1. Clone the repo, build with cargo build --release
 2. Add the MCP server to .claude.json with the binary path
@@ -70,8 +70,8 @@ Replace the last line with your email(s). Claude Code will guide you through eac
 ## Manual Setup (2 minutes)
 
 ```bash
-git clone https://github.com/tecnologicachile/mail-imap-mcp-rs.git
-cd mail-imap-mcp-rs
+git clone https://github.com/tecnologicachile/mail-mcp.git
+cd mail-mcp
 cargo build --release
 ```
 
@@ -81,7 +81,7 @@ Add to your MCP client config (Claude Code, Cursor, etc.):
 {
   "mcpServers": {
     "mail": {
-      "command": "./target/release/mail-imap-mcp-rs",
+      "command": "./target/release/mail-mcp",
       "env": {
         "MAIL_IMAP_DEFAULT_HOST": "imap.gmail.com",
         "MAIL_IMAP_DEFAULT_USER": "you@gmail.com",
@@ -348,7 +348,7 @@ See `AGENTS.md` for contributor guidelines.
 
 ## Contributing
 
-Contributions welcome! Check out the [issues](https://github.com/tecnologicachile/mail-imap-mcp-rs/issues) for good first issues.
+Contributions welcome! Check out the [issues](https://github.com/tecnologicachile/mail-mcp/issues) for good first issues.
 
 ## License
 

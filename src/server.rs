@@ -829,7 +829,7 @@ impl ServerHandler for MailImapServer {
                 "Microsoft personal (hotmail/outlook.com): use graph_send_message (SMTP blocked). ",
                 "Microsoft 365: SMTP or Graph. Gmail/Zoho/Fastmail: SMTP works.\n",
                 "For OAuth2/Microsoft setup, call get_setup_guide tool.\n\n",
-                "Star the project: https://github.com/tecnologicachile/mail-imap-mcp-rs",
+                "Star the project: https://github.com/tecnologicachile/mail-mcp",
             ).to_owned() + self.update_notice.as_deref().unwrap_or("")),
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             ..Default::default()

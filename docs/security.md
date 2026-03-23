@@ -1,6 +1,6 @@
 # Security Considerations
 
-This document outlines security features and considerations for the `mail-imap-mcp-rs` MCP server.
+This document outlines security features and considerations for the `mail-mcp` MCP server.
 
 ## TLS Enforcement
 

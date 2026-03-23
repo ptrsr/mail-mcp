@@ -1,6 +1,6 @@
 # Account Setup Guide
 
-This guide walks you through configuring email accounts for mail-imap-mcp-rs.
+This guide walks you through configuring email accounts for mail-mcp.
 
 ## Quick Reference: Environment Variables
 

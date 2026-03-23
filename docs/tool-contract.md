@@ -1,6 +1,6 @@
 # MCP Tool Contract
 
-This document defines the first build artifact for `mail-imap-mcp-rs`: the server-facing MCP contract.
+This document defines the first build artifact for `mail-mcp`: the server-facing MCP contract.
 It is the source of truth for tool names, input/output shapes, validation bounds, and safety rules.
 
 ## Design Decisions

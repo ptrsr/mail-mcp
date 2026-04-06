@@ -71,8 +71,17 @@ pub struct ServerConfig {
     pub smtp_write_enabled: bool,
     /// Whether to save sent messages to IMAP Sent folder
     pub smtp_save_sent: bool,
-    /// SMTP operation timeout in milliseconds
-    pub smtp_timeout_ms: u64,
+    /// SMTP connect/handshake/auth timeout in milliseconds
+    ///
+    /// Bounds the TCP connect, TLS handshake, and authentication phases.
+    /// Should be short — if the server can't be reached promptly, it's down.
+    pub smtp_connect_timeout_ms: u64,
+    /// SMTP send (DATA transmission) timeout in milliseconds
+    ///
+    /// Bounds the full message transmission including attachments. Should be
+    /// generous — large attachments over slow connections legitimately take
+    /// minutes.
+    pub smtp_send_timeout_ms: u64,
     /// Whether write operations (copy, move, delete, flag updates) are enabled
     pub write_enabled: bool,
     /// TCP connection timeout in milliseconds
@@ -152,7 +161,13 @@ impl ServerConfig {
             smtp_accounts,
             smtp_write_enabled: parse_bool_env("MAIL_SMTP_WRITE_ENABLED", false)?,
             smtp_save_sent: parse_bool_env("MAIL_SMTP_SAVE_SENT", false)?,
-            smtp_timeout_ms: parse_u64_env("MAIL_SMTP_TIMEOUT_MS", 30_000)?,
+            // Backward compat: MAIL_SMTP_TIMEOUT_MS (deprecated, single timeout)
+            // is honored as the send timeout if set, but the new vars take priority.
+            smtp_connect_timeout_ms: parse_u64_env("MAIL_SMTP_CONNECT_TIMEOUT_MS", 30_000)?,
+            smtp_send_timeout_ms: resolve_smtp_send_timeout(
+                env_opt_u64("MAIL_SMTP_SEND_TIMEOUT_MS")?,
+                env_opt_u64("MAIL_SMTP_TIMEOUT_MS")?,
+            ),
             write_enabled: parse_bool_env("MAIL_IMAP_WRITE_ENABLED", false)?,
             connect_timeout_ms: parse_u64_env("MAIL_IMAP_CONNECT_TIMEOUT_MS", 30_000)?,
             greeting_timeout_ms: parse_u64_env("MAIL_IMAP_GREETING_TIMEOUT_MS", 15_000)?,
@@ -618,9 +633,38 @@ fn parse_usize_env(key: &str, default: usize) -> AppResult<usize> {
     }
 }
 
+/// Read a `u64` env var, returning `None` if unset.
+///
+/// # Errors
+///
+/// Returns `InvalidInput` if the variable is set but not a valid `u64`.
+fn env_opt_u64(key: &str) -> AppResult<Option<u64>> {
+    match env::var(key) {
+        Ok(v) => v
+            .parse::<u64>()
+            .map(Some)
+            .map_err(|_| {
+                AppError::InvalidInput(format!("invalid u64 environment variable {key}: '{v}'"))
+            }),
+        Err(VarError::NotPresent) => Ok(None),
+        Err(VarError::NotUnicode(_)) => Err(AppError::InvalidInput(format!(
+            "environment variable {key} contains non-unicode data"
+        ))),
+    }
+}
+
+/// Resolve the SMTP send timeout from new and legacy env vars.
+///
+/// Priority: new var (`MAIL_SMTP_SEND_TIMEOUT_MS`) wins if set; otherwise the
+/// legacy var (`MAIL_SMTP_TIMEOUT_MS`) is honored for backward compatibility;
+/// otherwise the default of 300 000 ms (5 minutes).
+fn resolve_smtp_send_timeout(new_var: Option<u64>, legacy_var: Option<u64>) -> u64 {
+    new_var.or(legacy_var).unwrap_or(300_000)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::parse_bool_value;
+    use super::{parse_bool_value, resolve_smtp_send_timeout};
 
     #[test]
     fn parse_bool_value_accepts_common_truthy_and_falsy_values() {
@@ -638,5 +682,30 @@ mod tests {
         for invalid in ["", "2", "maybe", "enabled", "disabled"] {
             assert_eq!(parse_bool_value(invalid), None);
         }
+    }
+
+    #[test]
+    fn smtp_send_timeout_defaults_to_five_minutes_when_unset() {
+        assert_eq!(resolve_smtp_send_timeout(None, None), 300_000);
+    }
+
+    #[test]
+    fn smtp_send_timeout_honors_legacy_var_when_new_var_unset() {
+        // Existing deployments using MAIL_SMTP_TIMEOUT_MS keep working.
+        assert_eq!(resolve_smtp_send_timeout(None, Some(60_000)), 60_000);
+    }
+
+    #[test]
+    fn smtp_send_timeout_new_var_takes_priority_over_legacy() {
+        // When both are set, the explicit new var wins.
+        assert_eq!(
+            resolve_smtp_send_timeout(Some(120_000), Some(60_000)),
+            120_000
+        );
+    }
+
+    #[test]
+    fn smtp_send_timeout_uses_new_var_when_only_new_var_set() {
+        assert_eq!(resolve_smtp_send_timeout(Some(45_000), None), 45_000);
     }
 }

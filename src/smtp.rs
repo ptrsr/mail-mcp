@@ -113,7 +113,8 @@ pub struct EmailComposition {
 pub async fn send_email(
     smtp_config: &SmtpAccountConfig,
     token_manager: Option<&TokenManager>,
-    timeout_ms: u64,
+    connect_timeout_ms: u64,
+    send_timeout_ms: u64,
     composition: &EmailComposition,
 ) -> AppResult<String> {
     let message = build_message(composition)?;
@@ -123,9 +124,9 @@ pub async fn send_email(
         .unwrap_or_default()
         .to_owned();
 
-    let transport = build_transport(smtp_config, token_manager, timeout_ms).await?;
+    let transport = build_transport(smtp_config, token_manager, connect_timeout_ms).await?;
 
-    tokio::time::timeout(Duration::from_millis(timeout_ms), transport.send(message))
+    tokio::time::timeout(Duration::from_millis(send_timeout_ms), transport.send(message))
         .await
         .map_err(|_| AppError::Timeout("SMTP send timed out".to_owned()))
         .and_then(|r| {
@@ -151,11 +152,11 @@ pub async fn send_email(
 pub async fn verify_smtp(
     smtp_config: &SmtpAccountConfig,
     token_manager: Option<&TokenManager>,
-    timeout_ms: u64,
+    connect_timeout_ms: u64,
 ) -> AppResult<()> {
-    let transport = build_transport(smtp_config, token_manager, timeout_ms).await?;
+    let transport = build_transport(smtp_config, token_manager, connect_timeout_ms).await?;
 
-    tokio::time::timeout(Duration::from_millis(timeout_ms), transport.test_connection())
+    tokio::time::timeout(Duration::from_millis(connect_timeout_ms), transport.test_connection())
         .await
         .map_err(|_| AppError::Timeout("SMTP connection test timed out".to_owned()))
         .and_then(|r| {
@@ -282,12 +283,16 @@ fn build_message(comp: &EmailComposition) -> AppResult<Message> {
 }
 
 /// Build the async SMTP transport with appropriate auth and security.
+///
+/// `connect_timeout_ms` bounds the TCP/TLS/auth phase via lettre's internal
+/// I/O timeout. The DATA transmission timeout is enforced separately by the
+/// caller via `tokio::time::timeout`.
 async fn build_transport(
     config: &SmtpAccountConfig,
     token_manager: Option<&TokenManager>,
-    timeout_ms: u64,
+    connect_timeout_ms: u64,
 ) -> AppResult<AsyncSmtpTransport<Tokio1Executor>> {
-    let timeout_duration = Duration::from_millis(timeout_ms);
+    let timeout_duration = Duration::from_millis(connect_timeout_ms);
 
     let mut builder = match config.security {
         SmtpSecurity::Starttls => {

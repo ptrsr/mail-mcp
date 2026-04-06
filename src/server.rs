@@ -2704,7 +2704,8 @@ impl MailImapServer {
         let message_id = smtp::send_email(
             smtp_config,
             self.token_manager.as_deref(),
-            self.config.smtp_timeout_ms,
+            self.config.smtp_connect_timeout_ms,
+            self.config.smtp_send_timeout_ms,
             &composition,
         )
         .await?;
@@ -2845,7 +2846,8 @@ impl MailImapServer {
         let sent_message_id = smtp::send_email(
             smtp_config,
             self.token_manager.as_deref(),
-            self.config.smtp_timeout_ms,
+            self.config.smtp_connect_timeout_ms,
+            self.config.smtp_send_timeout_ms,
             &composition,
         )
         .await?;
@@ -2950,7 +2952,8 @@ impl MailImapServer {
         let sent_message_id = smtp::send_email(
             smtp_config,
             self.token_manager.as_deref(),
-            self.config.smtp_timeout_ms,
+            self.config.smtp_connect_timeout_ms,
+            self.config.smtp_send_timeout_ms,
             &composition,
         )
         .await?;
@@ -2990,7 +2993,7 @@ impl MailImapServer {
         smtp::verify_smtp(
             smtp_config,
             self.token_manager.as_deref(),
-            self.config.smtp_timeout_ms,
+            self.config.smtp_connect_timeout_ms,
         )
         .await?;
 

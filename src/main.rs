@@ -245,7 +245,9 @@ fn build_help_output(env_map: &BTreeMap<String, String>) -> String {
     out.push_str("  MAIL_IMAP_CURSOR_MAX_ENTRIES=512\n");
     out.push_str("  MAIL_SMTP_WRITE_ENABLED=false\n");
     out.push_str("  MAIL_SMTP_SAVE_SENT=true\n");
-    out.push_str("  MAIL_SMTP_TIMEOUT_MS=30000\n\n");
+    out.push_str("  MAIL_SMTP_CONNECT_TIMEOUT_MS=30000\n");
+    out.push_str("  MAIL_SMTP_SEND_TIMEOUT_MS=300000\n");
+    out.push_str("  # MAIL_SMTP_TIMEOUT_MS (deprecated; use MAIL_SMTP_SEND_TIMEOUT_MS)\n\n");
 
     out.push_str("Send/write gate policy\n");
     out.push_str(

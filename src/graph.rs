@@ -5,6 +5,9 @@
 //! entirely, which is necessary for personal hotmail/outlook.com accounts
 //! where Microsoft has disabled SMTP AUTH.
 //!
+//! When `in_reply_to` is provided, uses the Graph reply flow
+//! (`createReply` → PATCH → send) for proper threading.
+//!
 //! # Requirements
 //!
 //! - OAuth2 configured with `provider=microsoft`
@@ -15,7 +18,7 @@
 //! Uses the same `MAIL_OAUTH2_<SEGMENT>_*` variables as IMAP/SMTP OAuth2.
 //! No additional configuration needed beyond OAuth2.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::{AppError, AppResult};
 use crate::oauth2::TokenManager;
@@ -23,7 +26,7 @@ use crate::oauth2::TokenManager;
 /// Microsoft Graph API base URL
 const GRAPH_API_BASE: &str = "https://graph.microsoft.com/v1.0";
 
-// ─── Request types ───────────────────────────────────────────────────────────
+// ─── Request types (sendMail) ───────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,8 +47,6 @@ struct GraphMessage {
     bcc_recipients: Vec<GraphRecipient>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reply_to: Option<Vec<GraphRecipient>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    in_reply_to: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     internet_message_headers: Option<Vec<GraphHeader>>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -86,6 +87,39 @@ struct GraphAttachment {
     content_bytes: String,
 }
 
+// ─── Request types (reply / patch draft) ────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PatchDraftRequest {
+    subject: String,
+    body: GraphBody,
+    to_recipients: Vec<GraphRecipient>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    cc_recipients: Vec<GraphRecipient>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    bcc_recipients: Vec<GraphRecipient>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    attachments: Vec<GraphAttachment>,
+}
+
+// ─── Response types ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct MessageListResponse {
+    value: Vec<MessageItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MessageItem {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DraftResponse {
+    id: String,
+}
+
 // ─── Helper constructors ─────────────────────────────────────────────────────
 
 fn recipient(addr: &str) -> GraphRecipient {
@@ -100,9 +134,31 @@ fn recipients(addrs: &[String]) -> Vec<GraphRecipient> {
     addrs.iter().map(|a| recipient(a)).collect()
 }
 
+fn build_attachments(attachments: &[GraphEmailAttachment]) -> Vec<GraphAttachment> {
+    attachments
+        .iter()
+        .map(|a| GraphAttachment {
+            odata_type: "#microsoft.graph.fileAttachment",
+            name: a.filename.clone(),
+            content_type: a.content_type.clone(),
+            content_bytes: a.content_base64.clone(),
+        })
+        .collect()
+}
+
+fn resolve_body(
+    body_html: &Option<String>,
+    body_text: &Option<String>,
+) -> (&'static str, String) {
+    match (body_html, body_text) {
+        (Some(html), _) => ("HTML", sanitize_cdata(html)),
+        (None, Some(text)) => ("Text", sanitize_cdata(text)),
+        (None, None) => ("Text", String::new()),
+    }
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-/// Parameters for sending an email via Microsoft Graph
 /// An attachment for Graph API
 pub struct GraphEmailAttachment {
     pub filename: String,
@@ -127,8 +183,14 @@ pub struct GraphEmailParams {
 
 /// Send an email using the Microsoft Graph API.
 ///
-/// Calls `POST /me/sendMail` with the provided parameters.
-/// Requires an OAuth2 token with `Mail.Send` scope.
+/// When `in_reply_to` is provided, attempts the reply flow:
+///   1. Search for the original message by `internetMessageId`
+///   2. `POST /me/messages/{id}/createReply` to get a threaded draft
+///   3. `PATCH /me/messages/{draftId}` to set body, recipients, attachments
+///   4. `POST /me/messages/{draftId}/send` to send the draft
+///
+/// If the original message is not found (e.g. it was sent from another
+/// account), falls back to regular `sendMail` without threading.
 ///
 /// # Errors
 ///
@@ -141,20 +203,33 @@ pub async fn send_email(
     params: &GraphEmailParams,
 ) -> AppResult<()> {
     let access_token = token_manager.get_access_token(account_id).await?;
+    let client = reqwest::Client::new();
 
-    let (content_type, content) = match (&params.body_html, &params.body_text) {
-        (Some(html), _) => ("HTML", sanitize_cdata(html)),
-        (None, Some(text)) => ("Text", sanitize_cdata(text)),
-        (None, None) => ("Text", String::new()),
-    };
-
-    let mut headers = Vec::new();
-    if let Some(ref refs) = params.references {
-        headers.push(GraphHeader {
-            name: "References".to_owned(),
-            value: refs.clone(),
-        });
+    // If in_reply_to is provided, try the reply flow for proper threading
+    if let Some(ref irt) = params.in_reply_to {
+        if let Some(graph_msg_id) =
+            find_message_by_internet_id(&client, &access_token, irt).await?
+        {
+            return send_via_reply(&client, &access_token, &graph_msg_id, params).await;
+        }
+        // Message not found in this mailbox — fall through to regular sendMail
     }
+
+    send_via_sendmail(&client, &access_token, params).await
+}
+
+// ─── Private: sendMail flow ─────────────────────────────────────────────────
+
+async fn send_via_sendmail(
+    client: &reqwest::Client,
+    access_token: &str,
+    params: &GraphEmailParams,
+) -> AppResult<()> {
+    let (content_type, content) = resolve_body(&params.body_html, &params.body_text);
+
+    // Note: Graph API internetMessageHeaders only supports x-* custom headers.
+    // Standard headers like In-Reply-To and References are NOT allowed here.
+    // Threading is handled via the reply flow instead.
 
     let message = GraphMessage {
         subject: params.subject.clone(),
@@ -169,22 +244,8 @@ pub async fn send_email(
             .reply_to
             .as_ref()
             .map(|addr| vec![recipient(addr)]),
-        in_reply_to: params.in_reply_to.clone(),
-        internet_message_headers: if headers.is_empty() {
-            None
-        } else {
-            Some(headers)
-        },
-        attachments: params
-            .attachments
-            .iter()
-            .map(|a| GraphAttachment {
-                odata_type: "#microsoft.graph.fileAttachment",
-                name: a.filename.clone(),
-                content_type: a.content_type.clone(),
-                content_bytes: a.content_base64.clone(),
-            })
-            .collect(),
+        internet_message_headers: None,
+        attachments: build_attachments(&params.attachments),
     };
 
     let request_body = SendMailRequest {
@@ -192,18 +253,153 @@ pub async fn send_email(
         save_to_sent_items: params.save_to_sent,
     };
 
-    let client = reqwest::Client::new();
     let response = client
         .post(format!("{GRAPH_API_BASE}/me/sendMail"))
-        .bearer_auth(&access_token)
+        .bearer_auth(access_token)
         .json(&request_body)
         .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
         .map_err(|e| AppError::Internal(format!("Graph API request failed: {e}")))?;
 
+    handle_response(response).await
+}
+
+// ─── Private: reply flow (createReply → patch → send) ───────────────────────
+
+/// Search for a message by its RFC `Message-ID` header.
+/// Returns the Graph API internal ID if found.
+async fn find_message_by_internet_id(
+    client: &reqwest::Client,
+    access_token: &str,
+    internet_message_id: &str,
+) -> AppResult<Option<String>> {
+    // Strip angle brackets for the filter if present
+    let clean_id = internet_message_id
+        .trim()
+        .trim_start_matches('<')
+        .trim_end_matches('>');
+
+    let url = format!(
+        "{}/me/messages?$filter=internetMessageId eq '<{}>'&$select=id&$top=1",
+        GRAPH_API_BASE, clean_id
+    );
+
+    let response = client
+        .get(&url)
+        .bearer_auth(access_token)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Graph search request failed: {e}")))?;
+
+    if !response.status().is_success() {
+        // Search failed — don't error, just return None so we fall back to sendMail
+        return Ok(None);
+    }
+
+    let list: MessageListResponse = response
+        .json()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to parse Graph search response: {e}")))?;
+
+    Ok(list.value.into_iter().next().map(|m| m.id))
+}
+
+/// Send a properly threaded reply using Graph API.
+///   1. createReply → gets a draft with correct threading headers
+///   2. PATCH the draft with our body, recipients, attachments
+///   3. Send the draft
+async fn send_via_reply(
+    client: &reqwest::Client,
+    access_token: &str,
+    original_msg_id: &str,
+    params: &GraphEmailParams,
+) -> AppResult<()> {
+    // Step 1: Create reply draft
+    let create_reply_url = format!(
+        "{}/me/messages/{}/createReply",
+        GRAPH_API_BASE, original_msg_id
+    );
+
+    let response = client
+        .post(&create_reply_url)
+        .bearer_auth(access_token)
+        .header("Content-Type", "application/json")
+        .body("{}")
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Graph createReply failed: {e}")))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(AppError::Internal(format!(
+            "Graph createReply failed ({status}): {body}"
+        )));
+    }
+
+    let draft: DraftResponse = response
+        .json()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to parse createReply response: {e}")))?;
+
+    let draft_id = draft.id;
+
+    // Step 2: PATCH the draft with our content
+    let (content_type, content) = resolve_body(&params.body_html, &params.body_text);
+
+    let patch_body = PatchDraftRequest {
+        subject: params.subject.clone(),
+        body: GraphBody {
+            content_type,
+            content,
+        },
+        to_recipients: recipients(&params.to),
+        cc_recipients: recipients(&params.cc),
+        bcc_recipients: recipients(&params.bcc),
+        attachments: build_attachments(&params.attachments),
+    };
+
+    let patch_url = format!("{}/me/messages/{}", GRAPH_API_BASE, draft_id);
+
+    let response = client
+        .patch(&patch_url)
+        .bearer_auth(access_token)
+        .json(&patch_body)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Graph PATCH draft failed: {e}")))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(AppError::Internal(format!(
+            "Graph PATCH draft failed ({status}): {body}"
+        )));
+    }
+
+    // Step 3: Send the draft
+    let send_url = format!("{}/me/messages/{}/send", GRAPH_API_BASE, draft_id);
+
+    let response = client
+        .post(&send_url)
+        .bearer_auth(access_token)
+        .header("Content-Length", "0")
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Graph send draft failed: {e}")))?;
+
+    handle_response(response).await
+}
+
+// ─── Shared helpers ─────────────────────────────────────────────────────────
+
+async fn handle_response(response: reqwest::Response) -> AppResult<()> {
     if response.status().is_success() {
-        // 202 Accepted is the expected response
         Ok(())
     } else {
         let status = response.status();
@@ -221,12 +417,12 @@ pub async fn send_email(
     }
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
-
 /// Remove CDATA artifacts that some email clients leak into text.
 fn sanitize_cdata(text: &str) -> String {
     text.replace("]]>", "").replace("<![CDATA[", "")
 }
+
+// ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -259,7 +455,6 @@ mod tests {
                 cc_recipients: vec![],
                 bcc_recipients: vec![],
                 reply_to: None,
-                in_reply_to: None,
                 internet_message_headers: None,
                 attachments: vec![],
             },
@@ -269,7 +464,10 @@ mod tests {
         let json = serde_json::to_value(&req).unwrap();
         assert_eq!(json["message"]["subject"], "Test");
         assert_eq!(json["message"]["body"]["contentType"], "Text");
-        assert_eq!(json["message"]["toRecipients"][0]["emailAddress"]["address"], "to@test.com");
+        assert_eq!(
+            json["message"]["toRecipients"][0]["emailAddress"]["address"],
+            "to@test.com"
+        );
         assert_eq!(json["saveToSentItems"], true);
         // cc and bcc should be absent (skip_serializing_if)
         assert!(json["message"].get("ccRecipients").is_none());

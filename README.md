@@ -28,7 +28,7 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 | Multi-account | Yes | Single account |
 | Microsoft 365 + Hotmail | Both work | Usually neither |
 | Language | Rust (fast, safe) | TypeScript/Python |
-| Tests | 40 unit + integration | Mocks only |
+| Tests | 47 unit + integration | Mocks only |
 
 ## Feature Matrix
 
@@ -160,7 +160,7 @@ Get your token in 1 minute with device code flow. See [Account Setup Guide](docs
 | `smtp_reply_message` | Reply with threading headers |
 | `smtp_forward_message` | Forward with original inline |
 | `smtp_verify_account` | Test SMTP connectivity |
-| `graph_send_message` | Send via Microsoft Graph API |
+| `graph_send_message` | Send via Microsoft Graph API (with reply threading) |
 
 ### EWS — Exchange Web Services (3 tools)
 
@@ -325,6 +325,8 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 - [x] On-demand setup guide tool
 - [x] **EWS (Exchange Web Services)** — single token for read + send on Microsoft
 - [x] EWS with Microsoft Office Client ID (works on restricted tenants)
+- [x] **Graph API threading** — `createReply` flow for proper conversation threading
+- [x] **HTML formatting guidance** — LLM prefers multipart (text + HTML) for human emails
 
 ### Next — Local cache with instant search
 - [ ] **SQLite + FTS5 local email cache** — instant searches (<10ms vs 3-10s)
@@ -355,7 +357,7 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 ## Development
 
 ```bash
-cargo test              # 40 unit tests
+cargo test              # 47 unit tests
 cargo fmt -- --check    # formatting
 cargo clippy --all-targets -- -D warnings  # linting
 ```

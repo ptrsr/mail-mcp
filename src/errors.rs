@@ -29,9 +29,6 @@ pub enum AppError {
     /// Conflict (mailbox UIDVALIDITY changed, state inconsistent)
     #[error("conflict: {0}")]
     Conflict(String),
-    /// OAuth2 token refresh failure
-    #[error("token refresh failed: {0}")]
-    TokenRefresh(String),
     /// Internal error (unexpected failure, external crate error)
     #[error("internal error: {0}")]
     Internal(String),
@@ -55,7 +52,6 @@ impl AppError {
     /// - `AuthFailed` → `invalid_request`
     /// - `Timeout` → `internal_error`
     /// - `Conflict` → `invalid_request`
-    /// - `TokenRefresh` → `invalid_request`
     /// - `Internal` → `internal_error`
     pub fn to_error_data(&self) -> ErrorData {
         match self {
@@ -74,10 +70,6 @@ impl AppError {
             Self::Conflict(msg) => {
                 ErrorData::invalid_request(msg.clone(), Some(json!({ "code": "conflict" })))
             }
-            Self::TokenRefresh(msg) => ErrorData::invalid_request(
-                msg.clone(),
-                Some(json!({ "code": "token_refresh_failed" })),
-            ),
             Self::Internal(msg) => {
                 ErrorData::internal_error(msg.clone(), Some(json!({ "code": "internal" })))
             }

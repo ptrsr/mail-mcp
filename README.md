@@ -5,7 +5,6 @@
     IMAP + SMTP + EWS + Microsoft Graph API — built in Rust
   </p>
   <p align="center">
-    <a href="https://github.com/tecnologicachile/mail-mcp/actions"><img src="https://img.shields.io/github/actions/workflow/status/tecnologicachile/mail-mcp/ci.yml?label=build" alt="Build"></a>
     <a href="https://github.com/tecnologicachile/mail-mcp/releases"><img src="https://img.shields.io/github/v/release/tecnologicachile/mail-mcp?label=release" alt="Release"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/tecnologicachile/mail-mcp" alt="License"></a>
     <a href="https://github.com/tecnologicachile/mail-mcp/stargazers"><img src="https://img.shields.io/github/stars/tecnologicachile/mail-mcp?style=social" alt="Stars"></a>
@@ -15,6 +14,34 @@
 ---
 
 Most email MCP servers only do IMAP reads. This one does **everything**: read, search, send, reply, forward, bulk operations, Microsoft Graph API, and Exchange Web Services — with real OAuth2, multi-account, and multi-provider support. Written in Rust for speed and safety.
+
+## What's New in v0.4.1
+
+- **Fix**: `save_to_sent_folder` now archives the exact RFC822 bytes that were
+  sent (via `lettre.formatted()`), instead of a hand-rolled text-only stub.
+  The Sent-folder copy keeps the HTML body, the multipart/alternative
+  structure, and the RFC 2047-encoded subject — no more `???` where accents
+  used to be, and HTML is no longer silently dropped.
+- **Improved**: localized Sent-folder detection — `Enviado[s]`, `Elementos
+  enviados`, `Enviadas`, `Itens enviados`, `Envoyés`, `Éléments envoyés`,
+  `Gesendet`, `Posta inviata`, `Verzonden`, `Wysłane`, plus nested variants.
+  Previously only English names were recognized, so Zoho/localized IMAP
+  accounts fell through to a non-existent `"Sent"` folder.
+- **Improved**: `smtp_forward_message` accepts `body_html` (was hardcoded to
+  plain-text only).
+- **Improved**: EWS send gains `bcc`, `in_reply_to`, `references` (via
+  `<t:InternetMessageHeaders>`), plus full recipient + subject-length
+  validation — now at parity with the SMTP and Graph send paths.
+- **Improved**: Graph API threading fallbacks now log. `WARN` when the
+  message-lookup HTTP call fails (rate limit, 5xx, permissions) so operators
+  see threading degraded due to a real error; `DEBUG` when the original
+  message is legitimately not found.
+- **Refactor**: EWS XML parsing migrated from substring matching to
+  `quick-xml`. Fixes a latent namespace-collision bug (`<soap:Body>` vs
+  `<t:Body>`), correctly decodes XML entities and CDATA, and handles
+  attribute values containing `=` (common in base64-like EWS item IDs).
+- **Cleanup**: zero warnings on `cargo build --release`.
+- **Tests**: 64 (up from 47).
 
 ## Why This Project
 
@@ -28,7 +55,8 @@ Most email MCP servers only do IMAP reads. This one does **everything**: read, s
 | Multi-account | Yes | Single account |
 | Microsoft 365 + Hotmail | Both work | Usually neither |
 | Language | Rust (fast, safe) | TypeScript/Python |
-| Tests | 50 unit + integration | Mocks only |
+| Tests | 64 unit + integration | Mocks only |
+| Warnings in release build | 0 | Varies |
 
 ## Feature Matrix
 
@@ -191,6 +219,12 @@ Filename and MIME type are auto-detected from the file path. Reply with `include
 | `imap_search_and_move` | Search + move matches |
 | `imap_search_and_delete` | Search + delete matches |
 
+### Setup Helper (1 tool)
+
+| Tool | What it does |
+|------|-------------|
+| `get_setup_guide` | Provider-specific setup instructions (Microsoft OAuth2, Gmail App Passwords, Zoho, etc.) |
+
 ## Multi-Account
 
 Configure as many accounts as you need:
@@ -293,7 +327,7 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 |----------|---------|-------------|
 | `MAIL_IMAP_WRITE_ENABLED` | false | Enable IMAP write operations |
 | `MAIL_SMTP_WRITE_ENABLED` | false | Enable SMTP/Graph send operations |
-| `MAIL_SMTP_SAVE_SENT` | true | Save sent emails to IMAP Sent folder |
+| `MAIL_SMTP_SAVE_SENT` | false | Save sent emails to IMAP Sent folder (enable if your provider doesn't auto-save on send — e.g. Gmail does, Zoho doesn't always) |
 | `MAIL_SMTP_CONNECT_TIMEOUT_MS` | 30000 | SMTP TCP/TLS/auth timeout (connect phase) |
 | `MAIL_SMTP_SEND_TIMEOUT_MS` | 300000 | SMTP DATA transmission timeout (5 min — accommodates large attachments) |
 | `MAIL_SMTP_TIMEOUT_MS` | _(deprecated)_ | Legacy single timeout. Honored as fallback for `MAIL_SMTP_SEND_TIMEOUT_MS`. Prefer the split vars above. |
@@ -327,6 +361,10 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 - [x] EWS with Microsoft Office Client ID (works on restricted tenants)
 - [x] **Graph API threading** — `createReply` flow for proper conversation threading
 - [x] **HTML formatting guidance** — LLM prefers multipart (text + HTML) for human emails
+- [x] **Sent folder archiving preserves full MIME** — byte-identical copy of what the recipient received (v0.4.1)
+- [x] **Localized Sent folder detection** — Spanish / Portuguese / French / German / Italian / Dutch / Polish (v0.4.1)
+- [x] **EWS feature parity with SMTP/Graph** — BCC, threading headers, recipient validation (v0.4.1)
+- [x] **EWS XML parser via `quick-xml`** — correct entity/CDATA/namespace handling (v0.4.1)
 
 ### Next — Local cache with instant search
 - [ ] **SQLite + FTS5 local email cache** — instant searches (<10ms vs 3-10s)
@@ -357,7 +395,7 @@ Use `account_id` in tool calls: `"account_id": "gmail"`, `"account_id": "work"`,
 ## Development
 
 ```bash
-cargo test              # 47 unit tests
+cargo test              # 64 unit + integration tests
 cargo fmt -- --check    # formatting
 cargo clippy --all-targets -- -D warnings  # linting
 ```

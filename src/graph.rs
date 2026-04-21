@@ -173,7 +173,16 @@ pub struct GraphEmailParams {
     pub body_text: Option<String>,
     pub body_html: Option<String>,
     pub reply_to: Option<String>,
+    /// Original Message-ID we're replying to. When set, triggers the
+    /// createReply → PATCH → send flow so Exchange generates proper
+    /// threading headers server-side.
     pub in_reply_to: Option<String>,
+    /// Accepted for API symmetry with SMTP/EWS but NOT sent to Graph.
+    /// Microsoft Graph's `sendMail` strips non-`x-*` internetMessageHeaders,
+    /// so a caller-supplied References header would be silently dropped —
+    /// threading is instead driven server-side via the `in_reply_to` reply
+    /// flow. Present so callers don't have to special-case Graph.
+    #[allow(dead_code)]
     pub references: Option<String>,
     pub attachments: Vec<GraphEmailAttachment>,
     pub save_to_sent: bool,

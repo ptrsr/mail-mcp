@@ -25,7 +25,7 @@ use secrecy::{ExposeSecret, SecretString};
 
 use crate::config::AuthMethod;
 use crate::errors::{AppError, AppResult};
-use crate::oauth2::{self, TokenManager};
+use crate::oauth2::TokenManager;
 
 // ─── SMTP account config ────────────────────────────────────────────────────
 

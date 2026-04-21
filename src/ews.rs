@@ -28,10 +28,13 @@ const MESSAGES_NS: &str = "http://schemas.microsoft.com/exchange/services/2006/m
 
 // ─── EWS account config ─────────────────────────────────────────────────────
 
-/// EWS account configuration
+/// EWS account configuration.
+///
+/// The account identifier lives in the outer `HashMap<String,
+/// EwsAccountConfig>` key (see `config::ServerConfig::ews_accounts`), so
+/// it is not duplicated inside the struct.
 #[derive(Debug, Clone)]
 pub struct EwsAccountConfig {
-    pub account_id: String,
     pub user: String,
 }
 

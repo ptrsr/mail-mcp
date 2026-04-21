@@ -388,13 +388,7 @@ fn load_ews_accounts() -> AppResult<(
             _ => continue,
         };
 
-        ews_accounts.insert(
-            account_id.clone(),
-            crate::ews::EwsAccountConfig {
-                account_id: account_id.clone(),
-                user,
-            },
-        );
+        ews_accounts.insert(account_id.clone(), crate::ews::EwsAccountConfig { user });
 
         // Load OAuth2 for EWS
         let client_id = match env::var(format!("{prefix}CLIENT_ID")) {

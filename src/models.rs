@@ -638,19 +638,6 @@ pub struct SmtpVerifyAccountInput {
     pub account_id: String,
 }
 
-/// SMTP account metadata (no credentials)
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct SmtpAccountInfo {
-    /// Account identifier
-    pub account_id: String,
-    /// SMTP server hostname
-    pub host: String,
-    /// SMTP server port
-    pub port: u16,
-    /// Security mode (tls, starttls, plain)
-    pub security: String,
-}
-
 // ─── Microsoft Graph input models ────────────────────────────────────────────
 
 /// Input: send an email via Microsoft Graph API

@@ -27,8 +27,8 @@ use crate::models::{
     DeleteMessageInput, GetMessageInput, GetMessageRawInput, GraphSendMessageInput, MailboxInfo,
     MailboxStatusInfo, MailboxStatusInput, MessageDetail, MessageSummary, Meta, MoveMessageInput,
     RenameMailboxInput, SearchAndDeleteInput, SearchAndMoveInput, SearchMessagesInput,
-    SmtpAccountInfo, SmtpForwardMessageInput, SmtpReplyMessageInput, SmtpSendMessageInput,
-    SmtpVerifyAccountInput, ToolEnvelope, UpdateMessageFlagsInput,
+    SmtpForwardMessageInput, SmtpReplyMessageInput, SmtpSendMessageInput, SmtpVerifyAccountInput,
+    ToolEnvelope, UpdateMessageFlagsInput,
 };
 use crate::pagination::{CursorEntry, CursorStore};
 use crate::smtp;
@@ -965,7 +965,6 @@ impl ToolIssue {
             AppError::AuthFailed(_) => ("auth_failed", false),
             AppError::Timeout(_) => ("timeout", true),
             AppError::Conflict(_) => ("conflict", false),
-            AppError::TokenRefresh(_) => ("token_refresh_failed", true),
             AppError::Internal(_) => ("internal", true),
         };
         Self {
@@ -3286,7 +3285,6 @@ fn app_error_code(error: &AppError) -> &'static str {
         AppError::AuthFailed(_) => "auth_failed",
         AppError::Timeout(_) => "timeout",
         AppError::Conflict(_) => "conflict",
-        AppError::TokenRefresh(_) => "token_refresh_failed",
         AppError::Internal(_) => "internal",
     }
 }

@@ -61,9 +61,7 @@ impl OAuth2Provider {
     pub fn token_url(&self) -> &'static str {
         match self {
             Self::Google => "https://oauth2.googleapis.com/token",
-            Self::Microsoft => {
-                "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-            }
+            Self::Microsoft => "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         }
     }
 }
@@ -176,9 +174,7 @@ impl TokenManager {
         config: &OAuth2AccountConfig,
     ) -> AppResult<String> {
         let secret = config.client_secret.expose_secret();
-        let is_public_client = secret.is_empty()
-            || secret == "none"
-            || secret == "public";
+        let is_public_client = secret.is_empty() || secret == "none" || secret == "public";
 
         let mut params = vec![
             ("grant_type", "refresh_token"),
@@ -196,9 +192,7 @@ impl TokenManager {
             .timeout(Duration::from_secs(30))
             .send()
             .await
-            .map_err(|e| {
-                AppError::Internal(format!("OAuth2 token request failed: {e}"))
-            })?;
+            .map_err(|e| AppError::Internal(format!("OAuth2 token request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -309,12 +303,30 @@ mod tests {
 
     #[test]
     fn provider_parse_accepts_aliases() {
-        assert_eq!(OAuth2Provider::parse("google").unwrap(), OAuth2Provider::Google);
-        assert_eq!(OAuth2Provider::parse("gmail").unwrap(), OAuth2Provider::Google);
-        assert_eq!(OAuth2Provider::parse("GOOGLE").unwrap(), OAuth2Provider::Google);
-        assert_eq!(OAuth2Provider::parse("microsoft").unwrap(), OAuth2Provider::Microsoft);
-        assert_eq!(OAuth2Provider::parse("outlook").unwrap(), OAuth2Provider::Microsoft);
-        assert_eq!(OAuth2Provider::parse("office365").unwrap(), OAuth2Provider::Microsoft);
+        assert_eq!(
+            OAuth2Provider::parse("google").unwrap(),
+            OAuth2Provider::Google
+        );
+        assert_eq!(
+            OAuth2Provider::parse("gmail").unwrap(),
+            OAuth2Provider::Google
+        );
+        assert_eq!(
+            OAuth2Provider::parse("GOOGLE").unwrap(),
+            OAuth2Provider::Google
+        );
+        assert_eq!(
+            OAuth2Provider::parse("microsoft").unwrap(),
+            OAuth2Provider::Microsoft
+        );
+        assert_eq!(
+            OAuth2Provider::parse("outlook").unwrap(),
+            OAuth2Provider::Microsoft
+        );
+        assert_eq!(
+            OAuth2Provider::parse("office365").unwrap(),
+            OAuth2Provider::Microsoft
+        );
     }
 
     #[test]
@@ -329,7 +341,11 @@ mod tests {
             OAuth2Provider::Google.token_url(),
             "https://oauth2.googleapis.com/token"
         );
-        assert!(OAuth2Provider::Microsoft.token_url().contains("login.microsoftonline.com"));
+        assert!(
+            OAuth2Provider::Microsoft
+                .token_url()
+                .contains("login.microsoftonline.com")
+        );
     }
 
     #[test]

@@ -147,10 +147,7 @@ fn build_attachments(attachments: &[GraphEmailAttachment]) -> Vec<GraphAttachmen
         .collect()
 }
 
-fn resolve_body(
-    body_html: &Option<String>,
-    body_text: &Option<String>,
-) -> (&'static str, String) {
+fn resolve_body(body_html: &Option<String>, body_text: &Option<String>) -> (&'static str, String) {
     match (body_html, body_text) {
         (Some(html), _) => ("HTML", sanitize_cdata(html)),
         (None, Some(text)) => ("Text", sanitize_cdata(text)),
@@ -208,8 +205,7 @@ pub async fn send_email(
 
     // If in_reply_to is provided, try the reply flow for proper threading
     if let Some(ref irt) = params.in_reply_to {
-        if let Some(graph_msg_id) =
-            find_message_by_internet_id(&client, &access_token, irt).await?
+        if let Some(graph_msg_id) = find_message_by_internet_id(&client, &access_token, irt).await?
         {
             return send_via_reply(&client, &access_token, &graph_msg_id, params).await;
         }
@@ -248,10 +244,7 @@ async fn send_via_sendmail(
         to_recipients: recipients(&params.to),
         cc_recipients: recipients(&params.cc),
         bcc_recipients: recipients(&params.bcc),
-        reply_to: params
-            .reply_to
-            .as_ref()
-            .map(|addr| vec![recipient(addr)]),
+        reply_to: params.reply_to.as_ref().map(|addr| vec![recipient(addr)]),
         internet_message_headers: None,
         attachments: build_attachments(&params.attachments),
     };

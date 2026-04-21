@@ -183,9 +183,9 @@ impl ServerConfig {
     ///
     /// Returns `NotFound` if the account ID is not configured.
     pub fn get_account(&self, account_id: &str) -> AppResult<&AccountConfig> {
-        self.accounts
-            .get(account_id)
-            .ok_or_else(|| AppError::NotFound(format!("IMAP account '{account_id}' is not configured")))
+        self.accounts.get(account_id).ok_or_else(|| {
+            AppError::NotFound(format!("IMAP account '{account_id}' is not configured"))
+        })
     }
 
     /// Get SMTP account configuration by ID
@@ -194,11 +194,9 @@ impl ServerConfig {
     ///
     /// Returns `NotFound` if the SMTP account ID is not configured.
     pub fn get_smtp_account(&self, account_id: &str) -> AppResult<&SmtpAccountConfig> {
-        self.smtp_accounts
-            .get(account_id)
-            .ok_or_else(|| {
-                AppError::NotFound(format!("SMTP account '{account_id}' is not configured"))
-            })
+        self.smtp_accounts.get(account_id).ok_or_else(|| {
+            AppError::NotFound(format!("SMTP account '{account_id}' is not configured"))
+        })
     }
 }
 
@@ -640,12 +638,9 @@ fn parse_usize_env(key: &str, default: usize) -> AppResult<usize> {
 /// Returns `InvalidInput` if the variable is set but not a valid `u64`.
 fn env_opt_u64(key: &str) -> AppResult<Option<u64>> {
     match env::var(key) {
-        Ok(v) => v
-            .parse::<u64>()
-            .map(Some)
-            .map_err(|_| {
-                AppError::InvalidInput(format!("invalid u64 environment variable {key}: '{v}'"))
-            }),
+        Ok(v) => v.parse::<u64>().map(Some).map_err(|_| {
+            AppError::InvalidInput(format!("invalid u64 environment variable {key}: '{v}'"))
+        }),
         Err(VarError::NotPresent) => Ok(None),
         Err(VarError::NotUnicode(_)) => Err(AppError::InvalidInput(format!(
             "environment variable {key} contains non-unicode data"

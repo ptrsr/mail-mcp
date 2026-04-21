@@ -183,15 +183,12 @@ pub async fn connect_authenticated(
             })?
         }
         AuthMethod::Password => {
-            let pass = account
-                .pass
-                .as_ref()
-                .ok_or_else(|| {
-                    AppError::Internal(format!(
-                        "account '{}' uses password auth but no password configured",
-                        account.account_id
-                    ))
-                })?;
+            let pass = account.pass.as_ref().ok_or_else(|| {
+                AppError::Internal(format!(
+                    "account '{}' uses password auth but no password configured",
+                    account.account_id
+                ))
+            })?;
             timeout(
                 greeting_duration,
                 client.login(account.user.as_str(), pass.expose_secret()),
@@ -541,9 +538,7 @@ pub async fn create_mailbox(
         .await
         .map_err(|_| AppError::Timeout(format!("CREATE timed out for mailbox '{mailbox}'")))
         .and_then(|r| {
-            r.map_err(|e| {
-                AppError::Internal(format!("CREATE failed for mailbox '{mailbox}': {e}"))
-            })
+            r.map_err(|e| AppError::Internal(format!("CREATE failed for mailbox '{mailbox}': {e}")))
         })
 }
 
@@ -557,9 +552,7 @@ pub async fn delete_mailbox(
         .await
         .map_err(|_| AppError::Timeout(format!("DELETE timed out for mailbox '{mailbox}'")))
         .and_then(|r| {
-            r.map_err(|e| {
-                AppError::Internal(format!("DELETE failed for mailbox '{mailbox}': {e}"))
-            })
+            r.map_err(|e| AppError::Internal(format!("DELETE failed for mailbox '{mailbox}': {e}")))
         })
 }
 
@@ -595,9 +588,7 @@ pub async fn mailbox_status(
     .await
     .map_err(|_| AppError::Timeout(format!("STATUS timed out for mailbox '{mailbox}'")))
     .and_then(|r| {
-        r.map_err(|e| {
-            AppError::Internal(format!("STATUS failed for mailbox '{mailbox}': {e}"))
-        })
+        r.map_err(|e| AppError::Internal(format!("STATUS failed for mailbox '{mailbox}': {e}")))
     })?;
 
     Ok((mbox.exists, mbox.unseen.unwrap_or(0) as u32, mbox.recent))
@@ -856,7 +847,10 @@ mod tests {
 
         let login = timeout(
             greeting_duration,
-            client.login(account.user.as_str(), account.pass.as_ref().unwrap().expose_secret()),
+            client.login(
+                account.user.as_str(),
+                account.pass.as_ref().unwrap().expose_secret(),
+            ),
         )
         .await
         .map_err(|_| "IMAP login timeout".to_owned())?;

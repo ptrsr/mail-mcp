@@ -411,8 +411,8 @@ fn parse_find_items_response(xml: &str) -> AppResult<Vec<EwsMessage>> {
 /// name `Body` (which would otherwise swallow the entire payload).
 fn parse_get_item_response(xml: &str) -> AppResult<EwsMessageDetail> {
     if xml.contains("ResponseClass=\"Error\"") {
-        let msg = extract_xml_text(xml, "MessageText")
-            .unwrap_or_else(|| "unknown error".to_owned());
+        let msg =
+            extract_xml_text(xml, "MessageText").unwrap_or_else(|| "unknown error".to_owned());
         return Err(AppError::Internal(format!("EWS GetItem failed: {msg}")));
     }
 
@@ -475,47 +475,43 @@ fn parse_message_detail_block(reader: &mut Reader<&[u8]>) -> AppResult<EwsMessag
     loop {
         buf.clear();
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                match local_name(&e).as_str() {
-                    "ItemId" => {
-                        if detail.item_id.is_empty() {
-                            detail.item_id =
-                                attr_value(&e, "Id").unwrap_or_default();
-                        }
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => match local_name(&e).as_str() {
+                "ItemId" => {
+                    if detail.item_id.is_empty() {
+                        detail.item_id = attr_value(&e, "Id").unwrap_or_default();
                     }
-                    "Subject" => {
-                        detail.subject = read_text_until_end(reader);
-                    }
-                    "DateTimeReceived" => {
-                        detail.date_received = read_text_until_end(reader);
-                    }
-                    "IsRead" => {
-                        detail.is_read = read_text_until_end(reader) == "true";
-                    }
-                    "HasAttachments" => {
-                        detail.has_attachments =
-                            read_text_until_end(reader) == "true";
-                    }
-                    "Body" => {
-                        detail.body_text = read_text_until_end(reader);
-                    }
-                    "Name" if !captured_from_name => {
-                        detail.from_name = read_text_until_end(reader);
-                        captured_from_name = true;
-                    }
-                    "EmailAddress" if !captured_from_email => {
-                        detail.from_email = read_text_until_end(reader);
-                        captured_from_email = true;
-                    }
-                    "ToRecipients" => {
-                        detail.to = collect_recipient_emails(reader)?;
-                    }
-                    "CcRecipients" => {
-                        detail.cc = collect_recipient_emails(reader)?;
-                    }
-                    _ => {}
                 }
-            }
+                "Subject" => {
+                    detail.subject = read_text_until_end(reader);
+                }
+                "DateTimeReceived" => {
+                    detail.date_received = read_text_until_end(reader);
+                }
+                "IsRead" => {
+                    detail.is_read = read_text_until_end(reader) == "true";
+                }
+                "HasAttachments" => {
+                    detail.has_attachments = read_text_until_end(reader) == "true";
+                }
+                "Body" => {
+                    detail.body_text = read_text_until_end(reader);
+                }
+                "Name" if !captured_from_name => {
+                    detail.from_name = read_text_until_end(reader);
+                    captured_from_name = true;
+                }
+                "EmailAddress" if !captured_from_email => {
+                    detail.from_email = read_text_until_end(reader);
+                    captured_from_email = true;
+                }
+                "ToRecipients" => {
+                    detail.to = collect_recipient_emails(reader)?;
+                }
+                "CcRecipients" => {
+                    detail.cc = collect_recipient_emails(reader)?;
+                }
+                _ => {}
+            },
             Ok(Event::End(e)) if local_name_bytes_eq(e.name().as_ref(), "Message") => {
                 return Ok(detail);
             }
@@ -574,9 +570,7 @@ fn attr_value(e: &BytesStart<'_>, attr_name: &str) -> Option<String> {
             return Some(
                 raw.unescape_value()
                     .map(|c| c.into_owned())
-                    .unwrap_or_else(|_| {
-                        String::from_utf8_lossy(raw.value.as_ref()).into_owned()
-                    }),
+                    .unwrap_or_else(|_| String::from_utf8_lossy(raw.value.as_ref()).into_owned()),
             );
         }
     }
@@ -634,33 +628,30 @@ fn parse_message_block(reader: &mut Reader<&[u8]>) -> AppResult<EwsMessage> {
     loop {
         buf.clear();
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                match local_name(&e).as_str() {
-                    "ItemId" => {
-                        msg.item_id = attr_value(&e, "Id").unwrap_or_default();
-                        msg.change_key =
-                            attr_value(&e, "ChangeKey").unwrap_or_default();
-                    }
-                    "Subject" => {
-                        msg.subject = read_text_until_end(reader);
-                    }
-                    "DateTimeReceived" => {
-                        msg.date_received = read_text_until_end(reader);
-                    }
-                    "IsRead" => {
-                        msg.is_read = read_text_until_end(reader) == "true";
-                    }
-                    "Name" if !captured_name => {
-                        msg.from_name = read_text_until_end(reader);
-                        captured_name = true;
-                    }
-                    "EmailAddress" if !captured_email => {
-                        msg.from_email = read_text_until_end(reader);
-                        captured_email = true;
-                    }
-                    _ => {}
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => match local_name(&e).as_str() {
+                "ItemId" => {
+                    msg.item_id = attr_value(&e, "Id").unwrap_or_default();
+                    msg.change_key = attr_value(&e, "ChangeKey").unwrap_or_default();
                 }
-            }
+                "Subject" => {
+                    msg.subject = read_text_until_end(reader);
+                }
+                "DateTimeReceived" => {
+                    msg.date_received = read_text_until_end(reader);
+                }
+                "IsRead" => {
+                    msg.is_read = read_text_until_end(reader) == "true";
+                }
+                "Name" if !captured_name => {
+                    msg.from_name = read_text_until_end(reader);
+                    captured_name = true;
+                }
+                "EmailAddress" if !captured_email => {
+                    msg.from_email = read_text_until_end(reader);
+                    captured_email = true;
+                }
+                _ => {}
+            },
             Ok(Event::End(e)) if local_name_bytes_eq(e.name().as_ref(), "Message") => {
                 return Ok(msg);
             }
@@ -722,13 +713,19 @@ mod tests {
     #[test]
     fn extract_xml_text_works_with_t_prefix() {
         let xml = r#"<t:Subject>Hello World</t:Subject>"#;
-        assert_eq!(extract_xml_text(xml, "Subject").as_deref(), Some("Hello World"));
+        assert_eq!(
+            extract_xml_text(xml, "Subject").as_deref(),
+            Some("Hello World")
+        );
     }
 
     #[test]
     fn extract_xml_text_works_with_m_prefix() {
         let xml = r#"<m:MessageText>boom</m:MessageText>"#;
-        assert_eq!(extract_xml_text(xml, "MessageText").as_deref(), Some("boom"));
+        assert_eq!(
+            extract_xml_text(xml, "MessageText").as_deref(),
+            Some("boom")
+        );
     }
 
     #[test]
@@ -773,7 +770,10 @@ mod tests {
         // base64-ish values often have trailing '=' which must survive parsing.
         let xml = r#"<t:ItemId Id="AAMk=" ChangeKey="CQA="/>"#;
         assert_eq!(extract_attr(xml, "ItemId", "Id").as_deref(), Some("AAMk="));
-        assert_eq!(extract_attr(xml, "ItemId", "ChangeKey").as_deref(), Some("CQA="));
+        assert_eq!(
+            extract_attr(xml, "ItemId", "ChangeKey").as_deref(),
+            Some("CQA=")
+        );
     }
 
     #[test]
@@ -788,7 +788,11 @@ mod tests {
             </m:GetItemResponseMessage>
           </m:ResponseMessages></m:GetItemResponse>"#;
         let d = parse_get_item_response(xml).unwrap();
-        assert_eq!(d.item_id, "X=", "item_id extraction failed; got {:?}", d.item_id);
+        assert_eq!(
+            d.item_id, "X=",
+            "item_id extraction failed; got {:?}",
+            d.item_id
+        );
     }
 
     #[test]
@@ -876,7 +880,10 @@ mod tests {
             </m:GetItemResponseMessage>
           </m:ResponseMessages></m:GetItemResponse>"#;
         let err = parse_get_item_response(xml).unwrap_err();
-        assert!(err.to_string().contains("The specified object was not found"));
+        assert!(
+            err.to_string()
+                .contains("The specified object was not found")
+        );
     }
 
     #[test]
@@ -916,8 +923,7 @@ mod tests {
 
     #[test]
     fn build_internet_headers_includes_both_threading_headers() {
-        let headers =
-            build_internet_headers(Some("<a@x.com>"), Some("<a@x.com> <b@x.com>"));
+        let headers = build_internet_headers(Some("<a@x.com>"), Some("<a@x.com> <b@x.com>"));
         assert!(headers.contains("In-Reply-To"));
         assert!(headers.contains("References"));
         assert!(headers.contains("&lt;a@x.com&gt; &lt;b@x.com&gt;"));

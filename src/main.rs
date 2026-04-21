@@ -76,7 +76,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("starting MCP server transport=Stdio");
     let config = ServerConfig::load_from_env()?;
     let update_notice = check_for_updates().await;
-    let service = server::MailImapServer::new(config, update_notice).serve(stdio()).await?;
+    let service = server::MailImapServer::new(config, update_notice)
+        .serve(stdio())
+        .await?;
     service.waiting().await?;
     Ok(())
 }
@@ -219,7 +221,9 @@ fn build_help_output(env_map: &BTreeMap<String, String>) -> String {
     out.push_str("  MAIL_SMTP_<ACCOUNT>_PORT       (default: 587)\n");
     out.push_str("  MAIL_SMTP_<ACCOUNT>_USER\n");
     out.push_str("  MAIL_SMTP_<ACCOUNT>_PASS       (optional if OAuth2 configured)\n");
-    out.push_str("  MAIL_SMTP_<ACCOUNT>_SECURE     (starttls | tls | plain, default: starttls)\n\n");
+    out.push_str(
+        "  MAIL_SMTP_<ACCOUNT>_SECURE     (starttls | tls | plain, default: starttls)\n\n",
+    );
 
     out.push_str("Discovered SMTP sections (from current environment)\n");
     if smtp_sections.is_empty() {
@@ -250,15 +254,9 @@ fn build_help_output(env_map: &BTreeMap<String, String>) -> String {
     out.push_str("  # MAIL_SMTP_TIMEOUT_MS (deprecated; use MAIL_SMTP_SEND_TIMEOUT_MS)\n\n");
 
     out.push_str("Send/write gate policy\n");
-    out.push_str(
-        "  IMAP write tools are blocked unless MAIL_IMAP_WRITE_ENABLED=true.\n",
-    );
-    out.push_str(
-        "  SMTP send tools are blocked unless MAIL_SMTP_WRITE_ENABLED=true.\n",
-    );
-    out.push_str(
-        "  These gates protect against accidental mutations and sending.\n",
-    );
+    out.push_str("  IMAP write tools are blocked unless MAIL_IMAP_WRITE_ENABLED=true.\n");
+    out.push_str("  SMTP send tools are blocked unless MAIL_SMTP_WRITE_ENABLED=true.\n");
+    out.push_str("  These gates protect against accidental mutations and sending.\n");
 
     out
 }

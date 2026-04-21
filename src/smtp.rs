@@ -144,22 +144,25 @@ pub async fn send_email(
 
     let transport = build_transport(smtp_config, token_manager, connect_timeout_ms).await?;
 
-    tokio::time::timeout(Duration::from_millis(send_timeout_ms), transport.send(message))
-        .await
-        .map_err(|_| AppError::Timeout("SMTP send timed out".to_owned()))
-        .and_then(|r| {
-            r.map_err(|e| {
-                let msg = e.to_string();
-                if msg.to_ascii_lowercase().contains("auth")
-                    || msg.contains("535")
-                    || msg.contains("534")
-                {
-                    AppError::AuthFailed(format!("SMTP authentication failed: {msg}"))
-                } else {
-                    AppError::Internal(format!("SMTP send failed: {msg}"))
-                }
-            })
-        })?;
+    tokio::time::timeout(
+        Duration::from_millis(send_timeout_ms),
+        transport.send(message),
+    )
+    .await
+    .map_err(|_| AppError::Timeout("SMTP send timed out".to_owned()))
+    .and_then(|r| {
+        r.map_err(|e| {
+            let msg = e.to_string();
+            if msg.to_ascii_lowercase().contains("auth")
+                || msg.contains("535")
+                || msg.contains("534")
+            {
+                AppError::AuthFailed(format!("SMTP authentication failed: {msg}"))
+            } else {
+                AppError::Internal(format!("SMTP send failed: {msg}"))
+            }
+        })
+    })?;
 
     Ok(SentMessage { message_id, rfc822 })
 }
@@ -174,19 +177,22 @@ pub async fn verify_smtp(
 ) -> AppResult<()> {
     let transport = build_transport(smtp_config, token_manager, connect_timeout_ms).await?;
 
-    tokio::time::timeout(Duration::from_millis(connect_timeout_ms), transport.test_connection())
-        .await
-        .map_err(|_| AppError::Timeout("SMTP connection test timed out".to_owned()))
-        .and_then(|r| {
-            r.map_err(|e| {
-                let msg = e.to_string();
-                if msg.to_ascii_lowercase().contains("auth") {
-                    AppError::AuthFailed(format!("SMTP authentication failed: {msg}"))
-                } else {
-                    AppError::Internal(format!("SMTP connection test failed: {msg}"))
-                }
-            })
-        })?;
+    tokio::time::timeout(
+        Duration::from_millis(connect_timeout_ms),
+        transport.test_connection(),
+    )
+    .await
+    .map_err(|_| AppError::Timeout("SMTP connection test timed out".to_owned()))
+    .and_then(|r| {
+        r.map_err(|e| {
+            let msg = e.to_string();
+            if msg.to_ascii_lowercase().contains("auth") {
+                AppError::AuthFailed(format!("SMTP authentication failed: {msg}"))
+            } else {
+                AppError::Internal(format!("SMTP connection test failed: {msg}"))
+            }
+        })
+    })?;
 
     Ok(())
 }
@@ -195,13 +201,11 @@ pub async fn verify_smtp(
 
 /// Build a lettre Message from composition parameters.
 fn build_message(comp: &EmailComposition) -> AppResult<Message> {
-    let from_mailbox: Mailbox = comp
-        .from
-        .parse()
-        .map_err(|e| AppError::InvalidInput(format!("invalid From address '{}': {e}", comp.from)))?;
+    let from_mailbox: Mailbox = comp.from.parse().map_err(|e| {
+        AppError::InvalidInput(format!("invalid From address '{}': {e}", comp.from))
+    })?;
 
-    let mut builder: MessageBuilder = Message::builder()
-        .from(from_mailbox);
+    let mut builder: MessageBuilder = Message::builder().from(from_mailbox);
 
     for addr in &comp.to {
         let mb: Mailbox = addr
@@ -227,9 +231,9 @@ fn build_message(comp: &EmailComposition) -> AppResult<Message> {
     builder = builder.subject(&comp.subject);
 
     if let Some(ref reply_to) = comp.reply_to {
-        let mb: Mailbox = reply_to
-            .parse()
-            .map_err(|e| AppError::InvalidInput(format!("invalid Reply-To address '{reply_to}': {e}")))?;
+        let mb: Mailbox = reply_to.parse().map_err(|e| {
+            AppError::InvalidInput(format!("invalid Reply-To address '{reply_to}': {e}"))
+        })?;
         builder = builder.reply_to(mb);
     }
 
@@ -292,9 +296,9 @@ fn build_message(comp: &EmailComposition) -> AppResult<Message> {
                     .body(att.content.clone(), ct),
             );
         }
-        builder
-            .multipart(mixed)
-            .map_err(|e| AppError::Internal(format!("failed to build message with attachments: {e}")))?
+        builder.multipart(mixed).map_err(|e| {
+            AppError::Internal(format!("failed to build message with attachments: {e}"))
+        })?
     };
 
     Ok(message)
@@ -317,11 +321,11 @@ async fn build_transport(
             AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.host)
                 .map_err(|e| AppError::Internal(format!("SMTP STARTTLS relay error: {e}")))?
         }
-        SmtpSecurity::Tls => {
-            AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
-                .map_err(|e| AppError::Internal(format!("SMTP TLS relay error: {e}")))?
+        SmtpSecurity::Tls => AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
+            .map_err(|e| AppError::Internal(format!("SMTP TLS relay error: {e}")))?,
+        SmtpSecurity::Plain => {
+            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&config.host)
         }
-        SmtpSecurity::Plain => AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&config.host),
     };
 
     builder = builder.port(config.port).timeout(Some(timeout_duration));
@@ -371,7 +375,10 @@ mod tests {
     fn smtp_security_parse_accepts_valid_values() {
         assert_eq!(SmtpSecurity::parse("tls").unwrap(), SmtpSecurity::Tls);
         assert_eq!(SmtpSecurity::parse("ssl").unwrap(), SmtpSecurity::Tls);
-        assert_eq!(SmtpSecurity::parse("STARTTLS").unwrap(), SmtpSecurity::Starttls);
+        assert_eq!(
+            SmtpSecurity::parse("STARTTLS").unwrap(),
+            SmtpSecurity::Starttls
+        );
         assert_eq!(SmtpSecurity::parse("plain").unwrap(), SmtpSecurity::Plain);
         assert_eq!(SmtpSecurity::parse("none").unwrap(), SmtpSecurity::Plain);
     }
@@ -542,20 +549,14 @@ mod tests {
         let msg = build_message(&comp).unwrap();
         let bytes = msg.formatted();
         std::fs::write("/tmp/mail-mcp-sample.eml", &bytes).unwrap();
-        println!(
-            "wrote /tmp/mail-mcp-sample.eml — {} bytes",
-            bytes.len()
-        );
+        println!("wrote /tmp/mail-mcp-sample.eml — {} bytes", bytes.len());
     }
 
     #[test]
     fn build_message_multiple_recipients() {
         let comp = EmailComposition {
             from: "sender@example.com".to_owned(),
-            to: vec![
-                "a@example.com".to_owned(),
-                "b@example.com".to_owned(),
-            ],
+            to: vec!["a@example.com".to_owned(), "b@example.com".to_owned()],
             cc: vec!["c@example.com".to_owned()],
             bcc: vec!["d@example.com".to_owned()],
             subject: "Multi-recipient".to_owned(),

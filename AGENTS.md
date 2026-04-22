@@ -81,6 +81,7 @@ The repository includes a minimal multi-stage Dockerfile for running the MCP ser
 
 - Build image: `docker build -t mail-mcp .`
 - Run over stdio: `docker run --rm -i --env-file .env mail-mcp`
+- Pull published image: `docker pull ghcr.io/ptrsr/mail-mcp:vX.Y.Z`
 
 ### Docker Notes for Agents
 

@@ -434,7 +434,14 @@ Releases are automated via [`cargo-dist`](https://github.com/axodotdev/cargo-dis
    compiles binaries for Linux / macOS (Intel + Apple Silicon) / Windows,
    generates installer scripts (`.sh`, `.ps1`), creates the GitHub Release,
    and attaches all artifacts with SHA256 checksums.
-5. If anything fails you can re-run the workflow manually from the Actions
+5. The companion `.github/workflows/publish-docker.yml` workflow also runs on
+   `v*.*.*` tags and publishes `ghcr.io/ptrsr/mail-mcp` with `vX.Y.Z`,
+   `X.Y.Z`, and `latest` tags for stable releases, so users can pull the
+   versioned container directly:
+   ```bash
+   docker pull ghcr.io/ptrsr/mail-mcp:vX.Y.Z
+   ```
+6. If anything fails you can re-run the workflow manually from the Actions
    tab (the `workflow_dispatch` trigger is preserved as an escape hatch).
 
 **npm publishing is intentionally disabled.** The upstream fork was

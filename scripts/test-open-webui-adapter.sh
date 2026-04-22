@@ -23,7 +23,12 @@ GREENMAIL_USER="${GREENMAIL_USER:-test@localhost}"
 GREENMAIL_PASS="${GREENMAIL_PASS:-test}"
 GREENMAIL_PRELOAD_DIR="${GREENMAIL_PRELOAD_DIR:-$REPO_ROOT/tests/fixtures/greenmail-preload}"
 
-GREENMAIL_OPTS_DEFAULT="-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users=test:${GREENMAIL_PASS}@localhost -Dgreenmail.users.login=email -Dgreenmail.preload.dir=/greenmail-preload -Dgreenmail.verbose"
+GREENMAIL_OPTS_DEFAULT="-Dgreenmail.setup.test.all \
+-Dgreenmail.hostname=0.0.0.0 \
+-Dgreenmail.users=test:${GREENMAIL_PASS}@localhost \
+-Dgreenmail.users.login=email \
+-Dgreenmail.preload.dir=/greenmail-preload \
+-Dgreenmail.verbose"
 GREENMAIL_OPTS="${GREENMAIL_OPTS:-$GREENMAIL_OPTS_DEFAULT}"
 GREENMAIL_CONTAINER_IMAP_PORT=3143
 if [[ "$GREENMAIL_IMAP_SECURE" == "true" ]]; then
@@ -56,7 +61,7 @@ for port in ports:
     try:
         with socket.create_connection((host, port), timeout=1.5):
             pass
-    except Exception as exc:
+    except OSError as exc:
         print(exc)
         sys.exit(1)
 PY
@@ -92,7 +97,8 @@ ensure_mcpo() {
     return 0
   fi
 
-  local venv_dir="/tmp/mail-mcp-open-webui-adapter-venv"
+  local venv_dir
+  venv_dir="$(mktemp -d /tmp/mail-mcp-open-webui-adapter-venv.XXXXXX)"
   python3 -m venv "$venv_dir"
   # shellcheck disable=SC1091
   source "$venv_dir/bin/activate"

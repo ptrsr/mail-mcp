@@ -15,8 +15,8 @@ Environment:
   MAIL_MCP_BIN     Path to the mail-mcp binary.
                    Default: target/release/mail-mcp, then target/debug/mail-mcp,
                    then mail-mcp from PATH.
-  MCPO_COMMAND     Override the adapter launcher (for example: "uvx mcpo" or
-                   "python3 -m mcpo").
+  MCPO_COMMAND     Override the adapter launcher with a simple space-separated
+                   command (for example: "uvx mcpo" or "python3 -m mcpo").
   MCPO_HOST        HTTP bind address for mcpo. Default: 0.0.0.0
   MCPO_PORT        HTTP bind port for mcpo. Default: 8000
   MCPO_API_KEY     Optional API key for mcpo authentication.

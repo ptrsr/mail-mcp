@@ -55,7 +55,7 @@ Useful wrapper variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MAIL_MCP_BIN` | auto-detect | `mail-mcp` binary to expose |
-| `MCPO_COMMAND` | auto-detect | Override how `mcpo` is launched |
+| `MCPO_COMMAND` | auto-detect | Override how `mcpo` is launched with a simple space-separated command |
 | `MCPO_HOST` | `0.0.0.0` | HTTP bind address |
 | `MCPO_PORT` | `8000` | HTTP bind port |
 | `MCPO_API_KEY` | unset | Optional API key |

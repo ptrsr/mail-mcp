@@ -23,6 +23,25 @@ jobs:
   publish:
     runs-on: ubuntu-24.04
     steps:
+      - id: validate_tag
+        name: Validate requested release tag
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${INPUT_TAG}" ]]; then
+            echo "workflow_dispatch requires a release tag input such as v0.4.2"
+            exit 1
+          fi
+
+          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}" "refs/tags/${INPUT_TAG}" >/dev/null; then
+            echo "Release tag '${INPUT_TAG}' was not found in ${GITHUB_REPOSITORY}"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -37,8 +56,8 @@ jobs:
           set -euo pipefail
 
           TAG="${INPUT_TAG:-${GITHUB_REF_NAME}}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "publish-docker must run from a version tag like v1.2.3 or v1.2.3-beta"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "publish-docker must run from a version tag like v1.2.3 or v1.2.3-beta.1"
             exit 1
           fi
 

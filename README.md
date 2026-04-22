@@ -436,7 +436,8 @@ Releases are automated via [`cargo-dist`](https://github.com/axodotdev/cargo-dis
    and attaches all artifacts with SHA256 checksums.
 5. The companion `.github/workflows/publish-docker.yml` workflow also runs on
    `v*.*.*` tags and publishes `ghcr.io/ptrsr/mail-mcp` with `vX.Y.Z`,
-   `X.Y.Z`, and `latest` tags for stable releases, so users can pull the
+   `X.Y.Z`, and `latest` tags for stable releases (versions without
+   pre-release suffixes like `-beta` or `-rc.1`), so users can pull the
    versioned container directly:
    ```bash
    docker pull ghcr.io/ptrsr/mail-mcp:vX.Y.Z

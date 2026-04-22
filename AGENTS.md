@@ -92,7 +92,7 @@ The repository includes a minimal multi-stage Dockerfile for running the MCP ser
 - Docker publish workflow: `.github/workflows/publish-docker.yml`.
 - Docker publish trigger: git tags matching `v*.*.*`.
 - Manual Docker publish runs require a `tag` workflow-dispatch input (for example `v0.4.2`).
-- Published image tags include `latest`, `vX.Y.Z`, and `X.Y.Z` on GHCR.
+- Published image tags include `vX.Y.Z` and `X.Y.Z` on GHCR, plus `latest` for stable releases without prerelease suffixes.
 
 ## NPM / NPX Distribution
 

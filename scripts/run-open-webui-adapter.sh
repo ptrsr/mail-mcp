@@ -64,6 +64,27 @@ EOF
 
 resolve_mcpo_command() {
   if [[ -n "${MCPO_COMMAND:-}" ]]; then
+    if [[ "${MCPO_COMMAND}" == *'"'* \
+       || "${MCPO_COMMAND}" == *"'"* \
+       || "${MCPO_COMMAND}" == *'`'* \
+       || "${MCPO_COMMAND}" == *'$'* \
+       || "${MCPO_COMMAND}" == *';'* \
+       || "${MCPO_COMMAND}" == *'&'* \
+       || "${MCPO_COMMAND}" == *'|'* \
+       || "${MCPO_COMMAND}" == *'<'* \
+       || "${MCPO_COMMAND}" == *'>'* \
+       || "${MCPO_COMMAND}" == *'('* \
+       || "${MCPO_COMMAND}" == *')'* \
+       || "${MCPO_COMMAND}" == *'{'* \
+       || "${MCPO_COMMAND}" == *'}'* ]]; then
+      cat >&2 <<'EOF'
+MCPO_COMMAND must be a simple space-separated launcher without shell quoting or
+metacharacters. Use values such as:
+  MCPO_COMMAND="uvx mcpo"
+  MCPO_COMMAND="python3 -m mcpo"
+EOF
+      return 1
+    fi
     read -r -a MCPO_CMD <<<"${MCPO_COMMAND}"
     return 0
   fi

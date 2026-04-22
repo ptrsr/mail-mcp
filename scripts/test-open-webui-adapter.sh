@@ -37,10 +37,15 @@ fi
 
 started_local_container=0
 ADAPTER_PID=""
+TEMP_VENV_DIR=""
 cleanup() {
   if [[ -n "$ADAPTER_PID" ]]; then
     kill "$ADAPTER_PID" >/dev/null 2>&1 || true
     wait "$ADAPTER_PID" >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "$TEMP_VENV_DIR" && -d "$TEMP_VENV_DIR" ]]; then
+    rm -rf "$TEMP_VENV_DIR"
   fi
 
   if [[ "$started_local_container" -eq 1 ]]; then
@@ -97,11 +102,10 @@ ensure_mcpo() {
     return 0
   fi
 
-  local venv_dir
-  venv_dir="$(mktemp -d /tmp/mail-mcp-open-webui-adapter-venv.XXXXXX)"
-  python3 -m venv "$venv_dir"
+  TEMP_VENV_DIR="$(mktemp -d)"
+  python3 -m venv "$TEMP_VENV_DIR"
   # shellcheck disable=SC1091
-  source "$venv_dir/bin/activate"
+  source "$TEMP_VENV_DIR/bin/activate"
   pip install --quiet mcpo
 }
 

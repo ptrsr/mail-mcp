@@ -91,6 +91,7 @@ The repository includes a minimal multi-stage Dockerfile for running the MCP ser
 - Keep `.dockerignore` aligned with repo layout to avoid leaking local files and reduce context size.
 - Docker publish workflow: `.github/workflows/publish-docker.yml`.
 - Docker publish trigger: git tags matching `v*.*.*`.
+- Manual Docker publish runs require a `tag` workflow-dispatch input (for example `v0.4.2`).
 - Published image tags include `latest`, `vX.Y.Z`, and `X.Y.Z` on GHCR.
 
 ## NPM / NPX Distribution

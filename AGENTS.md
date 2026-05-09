@@ -81,6 +81,7 @@ The repository includes a minimal multi-stage Dockerfile for running the MCP ser
 
 - Build image: `docker build -t mail-mcp .`
 - Run over stdio: `docker run --rm -i --env-file .env mail-mcp`
+- Pull published image: `docker pull ghcr.io/ptrsr/mail-mcp:vX.Y.Z`
 
 ### Docker Notes for Agents
 
@@ -90,7 +91,8 @@ The repository includes a minimal multi-stage Dockerfile for running the MCP ser
 - Keep `.dockerignore` aligned with repo layout to avoid leaking local files and reduce context size.
 - Docker publish workflow: `.github/workflows/publish-docker.yml`.
 - Docker publish trigger: git tags matching `v*.*.*`.
-- Published image tags include `latest`, `vX.Y.Z`, and `X.Y.Z` on GHCR.
+- Manual Docker publish runs require a `tag` workflow-dispatch input (for example `v0.4.2`).
+- Published image tags include `vX.Y.Z` and `X.Y.Z` on GHCR, plus `latest` for stable releases without prerelease suffixes.
 
 ## NPM / NPX Distribution
 
